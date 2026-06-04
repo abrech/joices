@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "autoplay": "tsx scripts/autoplay.ts"
   },
   "devDependencies": {
+    "tsx": "^4.19.4",
     "typescript": "~6.0.2",
     "vite": "^5.4.21"
   }

@@ -1,13 +1,18 @@
 import type { GameState, ProfileState, RunAction, RunRecord } from '../../types/game-state';
 import { RUN_LOG_VERSION, createEmptyProfile, createInitialRunState } from '../../types/game-state';
+import type { SkillPickPayload } from '../../types/events';
 import { getWeapon } from '../../content/registries';
+import type { LootPayload } from '../../types/events';
 import {
   applyClaimLoot,
   applyCombatSkill,
+  applyLootSkillReward,
   applyPickFloor,
   applySelectClass,
   applySelectSkill,
   applySelectWeapon,
+  applySkipCombatLootSkillPick,
+  applySkipLootSkillReward,
   needsLootScreenBeforeClaim,
   openCombatLoot,
 } from '../RunCommands';
@@ -28,7 +33,10 @@ export function replayRun(record: RunRecord, profile?: ProfileState): GameState 
     const action = record.actions[i];
     const next = record.actions[i + 1];
 
-    if (action.kind === 'claimLoot' && needsLootScreenBeforeClaim(state)) {
+    if (
+      (action.kind === 'claimLoot' || action.kind === 'selectSkill') &&
+      needsLootScreenBeforeClaim(state)
+    ) {
       state = openCombatLoot(state);
     }
 
@@ -38,13 +46,28 @@ export function replayRun(record: RunRecord, profile?: ProfileState): GameState 
       (action.kind === 'combatAttack' || action.kind === 'combatSkill') &&
       state.run.combat?.finished &&
       state.run.combat.result === 'win' &&
-      next?.kind === 'claimLoot'
+      next &&
+      (next.kind === 'claimLoot' ||
+        next.kind === 'selectSkill' ||
+        next.kind === 'skipSkillPick')
     ) {
       state = openCombatLoot(state);
     }
   }
 
   return state;
+}
+
+function applySkipSkillPickReplay(state: GameState): GameState {
+  const { activeEvent } = state.run;
+  if (activeEvent?.screen === 'loot') {
+    return applySkipLootSkillReward(state);
+  }
+  const payload = activeEvent?.payload as SkillPickPayload | undefined;
+  if (activeEvent?.screen === 'skillPick' && payload?.afterCombatLoot) {
+    return applySkipCombatLootSkillPick(state);
+  }
+  return completeEvent(state, '__skip__');
 }
 
 function applyReplayAction(state: GameState, action: RunAction): GameState {
@@ -64,10 +87,17 @@ function applyReplayAction(state: GameState, action: RunAction): GameState {
       return applyCombatSkill(state, action.skillId);
     case 'claimLoot':
       return applyClaimLoot(state);
-    case 'selectSkill':
+    case 'selectSkill': {
+      if (state.run.activeEvent?.screen === 'loot') {
+        const loot = state.run.activeEvent.payload as LootPayload;
+        if (loot.skillChoices?.includes(action.skillId)) {
+          return applyLootSkillReward(state, action.skillId);
+        }
+      }
       return applySelectSkill(state, action.skillId);
+    }
     case 'skipSkillPick':
-      return completeEvent(state, '__skip__');
+      return applySkipSkillPickReplay(state);
     case 'buyShop':
       return purchaseShopItem(state, action.itemId);
     case 'leaveShop':

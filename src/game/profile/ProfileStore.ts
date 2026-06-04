@@ -38,6 +38,18 @@ function migrateProfile(parsed: ProfileState): ProfileState {
   return { version: PROFILE_VERSION };
 }
 
+export class MemoryProfileStore implements ProfileStore {
+  private data: ProfileState = { version: PROFILE_VERSION };
+
+  load(): ProfileState {
+    return this.data;
+  }
+
+  save(profile: ProfileState): void {
+    this.data = profile;
+  }
+}
+
 export class LocalProfileStore implements ProfileStore {
   load(): ProfileState {
     try {
@@ -55,4 +67,9 @@ export class LocalProfileStore implements ProfileStore {
   }
 }
 
-export const profileStore = new LocalProfileStore();
+export let profileStore: ProfileStore = new LocalProfileStore();
+
+/** Swap storage backend (e.g. headless autoplay scripts). */
+export function setProfileStore(store: ProfileStore): void {
+  profileStore = store;
+}
