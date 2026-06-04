@@ -16,7 +16,7 @@ export const twinSlash: SkillDef = {
     'Deal 125% attack + 2 bleed. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.1, 1.25][level - 1];
+    const mult = [1.02, 1.12, 1.28][level - 1];
     const stacks = 2;
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
@@ -45,7 +45,7 @@ export const shadowStep: SkillDef = {
   onUse: (ctx, level) => ({
     dodgeNext: true,
     counterOnDodge:
-      level >= 2 ? Math.floor(ctx.player.stats.attack * (level >= 3 ? 0.75 : 0.5)) : 0,
+      level >= 2 ? Math.floor(ctx.player.stats.attack * (level >= 3 ? 0.85 : 0.6)) : 0,
     logMessage: 'You vanish with Shadow Step!',
   }),
 };
@@ -66,8 +66,8 @@ export const flurry: SkillDef = {
     'Deal 100% attack + 4 bleed. Cooldown: 1 turn.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.7, 0.85, 1.0][level - 1];
-    const stacks = [2, 3, 4][level - 1];
+    const mult = [0.78, 0.92, 1.08][level - 1];
+    const stacks = [3, 4, 5][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,

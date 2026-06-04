@@ -310,7 +310,8 @@ function singleEnemyAttack(
   let dmg = enemyInstance.attack;
   const charged = enemyDef.behavior === 'bursty' && enemyInstance.turnCount % 3 === 0;
   if (charged) {
-    dmg = Math.floor(dmg * 1.5);
+    const burstMult = combat.isBoss ? 1.35 : 1.5;
+    dmg = Math.floor(dmg * burstMult);
     updated = addLog(updated, `${enemyDef.name} charges a powerful blow!`, 'enemy');
   }
   dmg = Math.floor(dmg * weakenAttackMultiplier(enemyInstance.statuses));

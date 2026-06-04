@@ -13,12 +13,16 @@ export const swordSlash: SkillDef = {
   levelDescriptions: [
     'Deal 90% attack damage. Always available.',
     'Deal 105% attack damage. Always available.',
-    'Deal 120% attack damage. Always available.',
+    'Deal 120% attack + 2 block. Always available.',
   ],
   onUse: (ctx, level) => {
     const mult = [0.9, 1.05, 1.2][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
-    return { damage: dmg, logMessage: `Sword Slash hits for ${dmg}!` };
+    return {
+      damage: dmg,
+      grantBlock: level >= 3 ? 2 : 0,
+      logMessage: `Sword Slash hits for ${dmg}!${level >= 3 ? ' (+2 block)' : ''}`,
+    };
   },
 };
 
@@ -66,7 +70,7 @@ export const riposte: SkillDef = {
   ],
   onUse: (ctx, level) => ({
     dodgeNext: true,
-    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.5, 0.75, 1.0][level - 1]),
+    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.45, 0.65, 0.85][level - 1]),
     logMessage: 'You brace for a Riposte!',
   }),
 };

@@ -70,7 +70,7 @@ export function getHemophiliaBonuses(
   return {
     extraDuration: level >= 3 ? 2 : 1,
     extraStacks: level >= 2 ? 1 : 0,
-    bonusDamagePerStack: level,
+    bonusDamagePerStack: level + (level >= 2 ? 1 : 0),
   };
 }
 
@@ -84,7 +84,7 @@ export function getToxicBloodBonuses(
 ): ToxicBloodBonuses | null {
   const owned = skills.find((s) => s.id === 'toxic-blood');
   if (!owned) return null;
-  const mult = [1.25, 1.4, 1.55][owned.level - 1];
+  const mult = [1.35, 1.52, 1.7][owned.level - 1];
   return { poisonDamageMultiplier: mult };
 }
 

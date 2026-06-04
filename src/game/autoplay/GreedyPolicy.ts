@@ -26,14 +26,16 @@ function scoreFloorOption(state: GameState, index: number): number {
 
   switch (option.eventId) {
     case 'heal':
+      if (nextBoss && hp < 0.85) return 100;
       return hp < 0.45 ? 100 : hp < 0.7 ? 60 : 20;
     case 'skill-training':
+      if (nextBoss && attacks < 3) return 90;
       return attacks < 2 ? 95 : skills < 4 ? 75 : 50;
     case 'shop':
       return attacks < 2 && state.run.player.gold >= 20 ? 85 : state.run.player.gold >= 35 ? 55 : 30;
     case 'enemy':
       if (hp < 0.22) return 15;
-      if (nextBoss && hp < 0.55) return 25;
+      if (nextBoss && hp < 0.75) return 15;
       return 70;
     case 'boss':
       return 10;

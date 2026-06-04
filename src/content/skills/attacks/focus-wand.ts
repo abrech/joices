@@ -16,7 +16,7 @@ export const arcaneBolt: SkillDef = {
     'Deal 135% spell power damage. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.95, 1.15, 1.35][level - 1];
+    const mult = [1.0, 1.2, 1.4][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return { damage: dmg, logMessage: `Arcane Bolt strikes for ${dmg}!` };
   },
@@ -38,8 +38,8 @@ export const focusBurn: SkillDef = {
     'Deal 120% spell power + 3 burn. Cooldown: 1 turn.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.9, 1.05, 1.2][level - 1];
-    const stacks = level >= 3 ? 3 : 2;
+    const mult = [0.95, 1.12, 1.28][level - 1];
+    const stacks = [3, 3, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return {
       damage: dmg,
@@ -65,7 +65,7 @@ export const pierceRay: SkillDef = {
     'Deal 170% spell power damage. Cooldown: 1 turn.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.25, 1.45, 1.7][level - 1];
+    const mult = [1.3, 1.5, 1.75][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return {
       damage: dmg,

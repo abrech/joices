@@ -46,7 +46,7 @@ export function statusDamagePerTick(
   enemyStatuses: StatusInstance[] = [],
   playerSkills: { id: string; level: number }[] = [],
 ): number {
-  const base = { bleed: 3, burn: 4, poison: 2, stun: 0, mark: 0, weaken: 0 }[type];
+  const base = { bleed: 3, burn: 4, poison: 3, stun: 0, mark: 0, weaken: 0 }[type];
   let dmg = base * stacks;
   if (type === 'bleed' && synergies.bleedBonusPerStack) {
     dmg += synergies.bleedBonusPerStack * stacks;

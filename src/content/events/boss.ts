@@ -1,6 +1,6 @@
 import type { EventDef } from '../../types/events';
 import { scaleEnemyGold } from '../../game/progression/Scaling';
-import { isBossFloor } from '../../game/progression/PacingRules';
+import { BOSS_FIRST_FLOOR, isBossFloor } from '../../game/progression/PacingRules';
 import { lich } from '../enemies';
 
 export const bossEvent: EventDef = {
@@ -19,6 +19,9 @@ export const bossEvent: EventDef = {
   screen: 'combat',
   resolve: (ctx) => {
     if (ctx.combatResult === 'win') {
+      if (ctx.run.floor === BOSS_FIRST_FLOOR) {
+        return [{ type: 'endRun', victory: true }];
+      }
       return [{ type: 'advanceFloor' }];
     }
     if (ctx.combatResult === 'lose') {

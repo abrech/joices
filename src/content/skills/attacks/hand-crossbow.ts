@@ -11,13 +11,13 @@ export const poisonDart: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 72% attack + 2 poison. Always available.',
-    'Deal 90% attack + 3 poison. Always available.',
-    'Deal 108% attack + 4 poison. Always available.',
+    'Deal 72% attack + 3 poison. Always available.',
+    'Deal 90% attack + 4 poison. Always available.',
+    'Deal 108% attack + 5 poison. Always available.',
   ],
   onUse: (ctx, level) => {
     const mult = [0.72, 0.9, 1.08][level - 1];
-    const stacks = [2, 3, 4][level - 1];
+    const stacks = [3, 4, 5][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,
@@ -43,13 +43,13 @@ export const markedShot: SkillDef = {
     'Deal 125% attack + 3 poison. Cooldown: 1 turn.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.95, 1.1, 1.25][level - 1];
-    const stacks = level >= 2 ? 3 : 2;
+    const mult = [1.0, 1.15, 1.3][level - 1];
+    const stacks = [3, 3, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },
-      extraStatuses: [{ target: 'enemy', type: 'mark', stacks: 1, duration: 3 }],
+      extraStatuses: [{ target: 'enemy', type: 'mark', stacks: 1, duration: 4 }],
       logMessage: `Marked Shot marks the foe and deals ${dmg}!`,
     };
   },
@@ -71,7 +71,7 @@ export const volley: SkillDef = {
     'Deal 105% attack + 5 poison. Cooldown: 1 turn.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.75, 0.9, 1.05][level - 1];
+    const mult = [0.82, 0.98, 1.12][level - 1];
     const stacks = [3, 4, 5][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {

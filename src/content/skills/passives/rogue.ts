@@ -40,9 +40,9 @@ export const toxicBlood: SkillDef = {
   classId: 'rogue',
   maxLevel: 3,
   levelDescriptions: [
-    '+25% poison damage.',
-    '+40% poison damage.',
-    '+55% poison damage.',
+    '+35% poison damage.',
+    '+52% poison damage.',
+    '+70% poison damage.',
   ],
   onPassive: () => [],
 };

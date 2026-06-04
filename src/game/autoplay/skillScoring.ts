@@ -25,8 +25,15 @@ export function estimateCombatDamage(state: GameState, skillId: string): number 
   const ctx = buildCombatContext(state.run, synergies);
   const result = skill.onUse(ctx, owned.level);
   let score = result.damage ?? 0;
-  if (result.applyStatus) score += 4 * (result.applyStatus.stacks ?? 1);
-  if (result.stun) score += 12;
+  if (result.applyStatus) {
+    const stacks = result.applyStatus.stacks ?? 1;
+    if (result.applyStatus.type === 'poison') score += 10 * stacks;
+    else if (result.applyStatus.type === 'burn' || result.applyStatus.type === 'bleed') {
+      score += 6 * stacks;
+    } else score += 4 * stacks;
+  }
+  if (result.extraStatuses?.some((s) => s.type === 'mark')) score += 18;
+  if (result.stun) score += 8;
   return score;
 }
 
@@ -116,13 +123,14 @@ export function combatSkillScore(state: GameState, skillId: string): number {
   if (living > 1 && skill?.tags.includes('aoe') && damage > 0) score += 25;
 
   const basic = isBasicAttack(state, skillId);
-  if (!basic && damage > 0) score += 15;
+  if (!basic && damage > 0) score += 22;
   if (basic) {
     const bestAlt = getAttackSkills(state.run)
       .filter((s) => !isBasicAttack(state, s.id))
       .map((s) => estimateCombatDamage(state, s.id))
       .reduce((m, d) => Math.max(m, d), 0);
-    if (bestAlt > damage) score -= 10;
+    if (bestAlt > damage) score -= 22;
+    if (combat.isBoss && bestAlt > 0) score -= 8;
   }
 
   return score;

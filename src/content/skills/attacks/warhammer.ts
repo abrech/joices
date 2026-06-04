@@ -11,12 +11,12 @@ export const crushingBlow: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 115% attack damage. Always available.',
-    'Deal 135% attack damage. Always available.',
-    'Deal 155% attack damage. Always available.',
+    'Deal 108% attack damage. Always available.',
+    'Deal 126% attack damage. Always available.',
+    'Deal 142% attack damage. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.15, 1.35, 1.55][level - 1];
+    const mult = [1.08, 1.26, 1.42][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
     return { damage: dmg, logMessage: `Crushing Blow smashes for ${dmg}!` };
   },
@@ -33,12 +33,12 @@ export const hammerStun: SkillDef = {
   maxLevel: 3,
   baseCooldown: 3,
   levelDescriptions: [
-    'Deal 90% attack and stun. Cooldown: 3 turns.',
-    'Deal 110% attack and stun. Cooldown: 2 turns.',
-    'Deal 120% attack and stun. Cooldown: 1 turn.',
+    'Deal 88% attack and stun. Cooldown: 3 turns.',
+    'Deal 102% attack and stun. Cooldown: 3 turns.',
+    'Deal 115% attack and stun. Cooldown: 2 turns.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.9, 1.1, 1.2][level - 1];
+    const mult = [0.88, 1.02, 1.15][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,
