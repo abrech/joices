@@ -17,11 +17,22 @@ export function isFirstCombatFloor(ctx: FloorContext): boolean {
 }
 
 export function buildEnemyPreview(ctx: FloorContext, payload: CombatPayload): string {
-  const enemy = getEnemy(payload.enemyId);
-  if (!enemy) return 'Unknown enemy';
-  const gold = scaleEnemyGold(enemy.goldDrop, ctx.floor);
+  const ids = payload.enemyIds ?? [payload.enemyId];
+  const names = ids
+    .map((id) => getEnemy(id)?.name ?? 'Enemy')
+    .join(', ');
+  let goldLow = 0;
+  let goldHigh = 0;
+  for (const id of ids) {
+    const enemy = getEnemy(id);
+    if (!enemy) continue;
+    const gold = scaleEnemyGold(enemy.goldDrop, ctx.floor);
+    goldLow += gold[0];
+    goldHigh += gold[1];
+  }
   const eliteLabel = payload.isElite ? ' · Elite' : '';
-  return `${enemy.name}${eliteLabel} · ~${gold[0]}-${gold[1]} gold`;
+  const countLabel = ids.length > 1 ? ` (×${ids.length})` : '';
+  return `${names}${countLabel}${eliteLabel} · ~${goldLow}-${goldHigh} gold`;
 }
 
 export function buildForcedEnemyOption(ctx: FloorContext): FloorOption {

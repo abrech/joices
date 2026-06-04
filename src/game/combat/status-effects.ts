@@ -1,7 +1,7 @@
-import type { StatusType } from '../../types/definitions';
+import type { StatusType, SynergyBonuses } from '../../types/definitions';
 import type { StatusInstance } from '../../types/game-state';
-import type { SynergyBonuses } from '../../types/definitions';
 import type { HemophiliaBonuses } from '../systems/SkillSystem';
+import { getPoisonTickMultiplier } from './combat-damage';
 
 export function applyStatus(
   statuses: StatusInstance[],
@@ -43,14 +43,19 @@ export function statusDamagePerTick(
   type: StatusType,
   stacks: number,
   synergies: SynergyBonuses,
+  enemyStatuses: StatusInstance[] = [],
+  playerSkills: { id: string; level: number }[] = [],
 ): number {
-  const base = { bleed: 3, burn: 4, poison: 2, stun: 0 }[type];
+  const base = { bleed: 3, burn: 4, poison: 2, stun: 0, mark: 0, weaken: 0 }[type];
   let dmg = base * stacks;
   if (type === 'bleed' && synergies.bleedBonusPerStack) {
     dmg += synergies.bleedBonusPerStack * stacks;
   }
   if (type === 'burn' && synergies.burnMultiplier) {
     dmg = Math.floor(dmg * synergies.burnMultiplier);
+  }
+  if (type === 'poison') {
+    dmg = Math.floor(dmg * getPoisonTickMultiplier(enemyStatuses, synergies, playerSkills));
   }
   return dmg;
 }

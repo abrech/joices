@@ -1,6 +1,52 @@
 import type { GameEngine } from '../../game/GameEngine';
-import type { ShopPayload } from '../../types/events';
-import { AssetImage } from '../components/AssetImage';
+import type { ShopItem, ShopPayload } from '../../types/events';
+import { getSkill } from '../../content/registries';
+import { Card } from '../components/Card';
+import { getSkillDescription } from '../../game/systems/SkillSystem';
+
+const STAT_ITEM_IMAGES: Record<string, string> = {
+  'shop-heal': 'heal',
+  'shop-attack': 'power-strike',
+  'shop-block': 'shield-bash',
+  'shop-maxhp': 'thick-skin',
+  'shop-crit': 'keen-eye',
+  'shop-spell': 'arcane-battery',
+};
+
+function shopItemImageKey(item: ShopItem): string {
+  if (item.type === 'skill' && item.skillId) {
+    return getSkill(item.skillId)?.imageKey ?? 'skill';
+  }
+  return STAT_ITEM_IMAGES[item.id] ?? 'shop';
+}
+
+function shopItemTags(item: ShopItem): string[] | undefined {
+  if (item.type === 'skill' && item.skillId) {
+    const skill = getSkill(item.skillId);
+    if (skill) return skill.tags;
+  }
+  return [item.type];
+}
+
+function shopItemDescription(item: ShopItem): string {
+  if (item.type === 'skill' && item.skillId) {
+    const skill = getSkill(item.skillId);
+    if (skill) {
+      const levelDesc = getSkillDescription(item.skillId, 1);
+      return [skill.description, levelDesc].filter(Boolean).join('\n\n');
+    }
+  }
+  return item.description;
+}
+
+function shopItemTitle(item: ShopItem): string {
+  if (item.type === 'skill') {
+    const skill = item.skillId ? getSkill(item.skillId) : null;
+    const kind = skill?.type === 'attack' ? 'Attack' : skill?.type === 'passive' ? 'Passive' : 'Skill';
+    return skill ? `${skill.name} (${kind})` : item.name;
+  }
+  return item.name;
+}
 
 export function ShopScreen(engine: GameEngine): HTMLElement {
   const state = engine.getState();
@@ -16,31 +62,26 @@ export function ShopScreen(engine: GameEngine): HTMLElement {
     empty.style.color = 'var(--text-muted)';
     empty.textContent = 'Nothing left to buy.';
     el.appendChild(empty);
-  }
+  } else {
+    const grid = document.createElement('div');
+    grid.className = 'card-grid card-grid--stagger';
 
-  for (const item of items) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    const canAfford = state.run.player.gold >= item.price;
-    row.className = 'shop-item' + (canAfford ? '' : ' shop-item--disabled');
-    row.disabled = !canAfford;
-
-    row.appendChild(AssetImage('shop', 'skill-chip__img', item.name));
-
-    const info = document.createElement('div');
-    info.innerHTML = `<strong>${item.name}</strong><br><span style="font-size:0.85rem;color:var(--text-secondary)">${item.description}</span>`;
-    row.appendChild(info);
-
-    const price = document.createElement('span');
-    price.className = 'shop-item__price';
-    price.textContent = `${item.price}g`;
-    row.appendChild(price);
-
-    if (canAfford) {
-      row.addEventListener('click', () => engine.buyShopItem(item.id));
+    for (const item of items) {
+      const canAfford = state.run.player.gold >= item.price;
+      grid.appendChild(
+        Card({
+          title: shopItemTitle(item),
+          description: shopItemDescription(item),
+          imageKey: shopItemImageKey(item),
+          tags: shopItemTags(item),
+          preview: `${item.price} gold${canAfford ? '' : ' — not enough gold'}`,
+          disabled: !canAfford,
+          onClick: canAfford ? () => engine.buyShopItem(item.id) : undefined,
+        }),
+      );
     }
 
-    el.appendChild(row);
+    el.appendChild(grid);
   }
 
   const leave = document.createElement('button');

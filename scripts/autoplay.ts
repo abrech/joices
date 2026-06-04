@@ -5,6 +5,8 @@
  *   npm run autoplay
  *   npm run autoplay -- --runs 50 --policy greedy --out logs/autoplay
  *   npm run autoplay -- --runs 20 --policy random --seed 12345
+ *
+ * Each batch is written to <out>/<batchId>/ (run JSON files + summary.json).
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -54,10 +56,10 @@ async function main(): Promise<void> {
   configureHeadlessProfileStore();
 
   const batchId = new Date().toISOString().replace(/[:.]/g, '-');
-  const outDir = opts.outDir;
-  await mkdir(outDir, { recursive: true });
+  const batchDir = join(opts.outDir, batchId);
+  await mkdir(batchDir, { recursive: true });
 
-  console.log(`Autoplay (${opts.policy}): ${opts.runs} run(s) → ${outDir}`);
+  console.log(`Autoplay (${opts.policy}): ${opts.runs} run(s) → ${batchDir}`);
 
   const { records, results, stuckRuns, replayFailures } = runAutoplayBatch({
     runs: opts.runs,
@@ -73,8 +75,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < records.length; i++) {
     const record = records[i];
     const result = results[i];
-    const fileName = `run-${batchId}-${record.id.slice(0, 8)}.json`;
-    const filePath = join(outDir, fileName);
+    const fileName = `run-${record.id.slice(0, 8)}.json`;
+    const filePath = join(batchDir, fileName);
     await writeFile(filePath, JSON.stringify(record, null, 2), 'utf8');
 
     const summary = metricsFromRecord(record, result.metrics);
@@ -91,7 +93,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const summaryPath = join(outDir, `summary-${batchId}.json`);
+  const summaryPath = join(batchDir, 'summary.json');
   await writeFile(
     summaryPath,
     JSON.stringify(

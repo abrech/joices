@@ -44,7 +44,8 @@ export const shadowStep: SkillDef = {
   ],
   onUse: (ctx, level) => ({
     dodgeNext: true,
-    damage: level >= 2 ? Math.floor(ctx.player.stats.attack * (level >= 3 ? 0.75 : 0.5)) : 0,
+    counterOnDodge:
+      level >= 2 ? Math.floor(ctx.player.stats.attack * (level >= 3 ? 0.75 : 0.5)) : 0,
     logMessage: 'You vanish with Shadow Step!',
   }),
 };

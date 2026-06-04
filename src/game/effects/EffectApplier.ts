@@ -68,28 +68,37 @@ export function applyEffects(state: GameState, effects: GameEffect[]): GameState
         break;
       }
       case 'startCombat': {
-        const enemy = getEnemy(effect.enemyId);
-        if (!enemy) break;
-        const scaled = effect.isBoss
-          ? scaledBossStats(enemy.baseStats.maxHp, enemy.baseStats.attack, run.floor)
-          : scaledEnemyStats(
-              enemy.baseStats.maxHp,
-              enemy.baseStats.attack,
-              run.floor,
-              enemy.tier,
-            );
-        const goldRange = scaleEnemyGold(enemy.goldDrop, run.floor);
+        const combatEnemies: import('../combat/CombatEngine').StartCombatEnemyParams[] = [];
+        let totalGold = 0;
+        for (const eid of effect.enemyIds) {
+          const enemy = getEnemy(eid);
+          if (!enemy) continue;
+          const scaled = effect.isBoss
+            ? scaledBossStats(enemy.baseStats.maxHp, enemy.baseStats.attack, run.floor)
+            : scaledEnemyStats(
+                enemy.baseStats.maxHp,
+                enemy.baseStats.attack,
+                run.floor,
+                enemy.tier,
+              );
+          const goldRange = scaleEnemyGold(enemy.goldDrop, run.floor);
+          totalGold += goldRange[0] + Math.floor((goldRange[1] - goldRange[0]) * 0.5);
+          combatEnemies.push({
+            enemyId: eid,
+            hp: scaled.hp,
+            maxHp: scaled.hp,
+            attack: scaled.attack,
+          });
+        }
+        if (combatEnemies.length === 0) break;
         run = {
           ...run,
           phase: 'event',
           combat: startCombat({
-            enemyId: effect.enemyId,
-            enemyHp: scaled.hp,
-            enemyMaxHp: scaled.hp,
-            enemyAttack: scaled.attack,
+            enemies: combatEnemies,
             skillCooldowns: initSkillCooldowns(run),
             isBoss: effect.isBoss ?? false,
-            goldReward: goldRange[0] + Math.floor((goldRange[1] - goldRange[0]) * 0.5),
+            goldReward: totalGold,
           }),
         };
         break;

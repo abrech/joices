@@ -74,6 +74,20 @@ export function getHemophiliaBonuses(
   };
 }
 
+export interface ToxicBloodBonuses {
+  poisonDamageMultiplier: number;
+}
+
+/** Toxic Blood: +25% / +40% / +55% poison tick damage. */
+export function getToxicBloodBonuses(
+  skills: { id: string; level: number }[],
+): ToxicBloodBonuses | null {
+  const owned = skills.find((s) => s.id === 'toxic-blood');
+  if (!owned) return null;
+  const mult = [1.25, 1.4, 1.55][owned.level - 1];
+  return { poisonDamageMultiplier: mult };
+}
+
 export function initSkillCooldowns(run: RunState): Record<string, number> {
   const cooldowns: Record<string, number> = {};
   for (const s of run.player.skills) {

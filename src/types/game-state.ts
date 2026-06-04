@@ -39,21 +39,36 @@ export interface CombatLastAction {
   kind: 'attack' | 'skill' | 'status' | 'dodge' | 'block' | 'stun';
   damage?: number;
   crit?: boolean;
+  charged?: boolean;
+  label?: string;
+  targetInstanceId?: string;
+  aoe?: boolean;
+}
+
+export interface CombatEnemyInstance {
+  instanceId: string;
+  enemyId: string;
+  hp: number;
+  maxHp: number;
+  attack: number;
+  statuses: StatusInstance[];
+  stunned: boolean;
+  turnCount: number;
 }
 
 export interface CombatState {
-  enemyId: string;
-  enemyHp: number;
-  enemyMaxHp: number;
-  enemyAttack: number;
-  enemyStatuses: StatusInstance[];
+  enemies: CombatEnemyInstance[];
+  targetIndex: number;
   playerStatuses: StatusInstance[];
   turn: 'player' | 'enemy';
+  /** Index into living enemy order during multi-enemy enemy phase */
+  enemyPhaseIndex: number;
   log: CombatLogEntry[];
   skillCooldowns: Record<string, number>;
   playerDodgeNext: boolean;
-  enemyTurnCount: number;
-  enemyStunned: boolean;
+  playerCounterDamage: number;
+  playerBonusBlock: number;
+  playerPierceNext: boolean;
   isBoss: boolean;
   goldReward: number;
   finished: boolean;

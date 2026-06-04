@@ -82,8 +82,7 @@ export function openCombatLoot(state: GameState): GameState {
 }
 
 export function applyCombatSkill(state: GameState, skillId: string): GameState {
-  let next = { ...state, run: useSkill(state.run, skillId) };
-  return drainCombatEnemyPhase(next);
+  return { ...state, run: useSkill(state.run, skillId) };
 }
 
 function finishLootWithoutSkill(state: GameState): GameState {

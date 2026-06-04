@@ -12,7 +12,10 @@ export function getScreenKey(state: GameState): string {
     case 'gameOver':
       return 'gameOver';
     case 'event': {
-      if (run.combat) return `combat:${run.combat.enemyId}:${run.floor}`;
+      if (run.combat) {
+        const ids = run.combat.enemies.map((e) => e.enemyId).join(',');
+        return `combat:${ids}:${run.floor}`;
+      }
       const screen = run.activeEvent?.screen;
       if (screen) return `event:${screen}:${run.floor}`;
       return `event:unknown:${run.floor}`;

@@ -4,7 +4,7 @@ export interface TooltipSection {
 }
 
 export interface TooltipOptions {
-  variant?: 'default' | 'action' | 'panel';
+  variant?: 'default' | 'action' | 'panel' | 'badge';
 }
 
 function fillTooltip(el: HTMLElement, content: string | TooltipSection[]): void {
@@ -34,7 +34,9 @@ export function Tooltip(
       ? 'tooltip-wrap tooltip-wrap--action'
       : variant === 'panel'
         ? 'tooltip-wrap tooltip-wrap--panel'
-        : 'tooltip-wrap';
+        : variant === 'badge'
+          ? 'tooltip-wrap tooltip-wrap--badge'
+          : 'tooltip-wrap';
 
   const tip = document.createElement('span');
   const tipClass =
@@ -42,7 +44,9 @@ export function Tooltip(
       ? 'tooltip tooltip--action'
       : variant === 'panel'
         ? 'tooltip tooltip--panel'
-        : 'tooltip';
+        : variant === 'badge'
+          ? 'tooltip tooltip--badge'
+          : 'tooltip';
   tip.className = tipClass;
   tip.setAttribute('role', 'tooltip');
   fillTooltip(tip, content);

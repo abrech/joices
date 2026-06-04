@@ -41,7 +41,11 @@ export function beginEvent(state: GameState, eventId: string, payload: unknown):
   if (event.screen === 'combat') {
     const p = payload as CombatPayload;
     return applyEffects(base, [
-      { type: 'startCombat', enemyId: p.enemyId, isBoss: p.isBoss },
+      {
+        type: 'startCombat',
+        enemyIds: p.enemyIds ?? [p.enemyId],
+        isBoss: p.isBoss,
+      },
     ]);
   }
 

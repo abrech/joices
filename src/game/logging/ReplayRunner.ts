@@ -13,6 +13,7 @@ import {
   applySelectWeapon,
   applySkipCombatLootSkillPick,
   applySkipLootSkillReward,
+  drainCombatEnemyPhase,
   needsLootScreenBeforeClaim,
   openCombatLoot,
 } from '../RunCommands';
@@ -81,10 +82,10 @@ function applyReplayAction(state: GameState, action: RunAction): GameState {
     case 'combatAttack': {
       const basicId = getWeapon(state.run.player.weaponId)?.starterAttackId;
       if (!basicId) return state;
-      return applyCombatSkill(state, basicId);
+      return drainCombatEnemyPhase(applyCombatSkill(state, basicId));
     }
     case 'combatSkill':
-      return applyCombatSkill(state, action.skillId);
+      return drainCombatEnemyPhase(applyCombatSkill(state, action.skillId));
     case 'claimLoot':
       return applyClaimLoot(state);
     case 'selectSkill': {

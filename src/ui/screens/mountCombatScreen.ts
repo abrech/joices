@@ -1,19 +1,22 @@
 import type { GameEngine } from '../../game/GameEngine';
-import type { CombatLastAction, CombatState, GameState } from '../../types/game-state';
+import type { CombatEnemyInstance, CombatLastAction, CombatState, GameState } from '../../types/game-state';
+import { enemyDisplayLabel, pickLowestHpTargetIndex } from '../../game/combat/combat-state';
 import { getEnemy, getSkill, getClass, getWeapon } from '../../content/registries';
 import { getSkillDescription } from '../../game/systems/SkillSystem';
 import { AssetImage } from '../components/AssetImage';
-import { CombatLog } from '../components/CombatLog';
+import { CombatLog, scrollCombatLogToLatest } from '../components/CombatLog';
 import { StatusBadges } from '../components/StatusBadges';
 import { formatTagsLine } from '../components/TagChips';
 import { Tooltip } from '../components/Tooltip';
 import {
   animMs,
   ENEMY_ACTION_ANIM_MS,
+  ENEMY_CHARGED_ACTION_ANIM_MS,
   ENEMY_TURN_BANNER_MS,
   PLAYER_ACTION_ANIM_MS,
   VICTORY_ANIM_MS,
   DEFEAT_ANIM_MS,
+  prefersReducedMotion,
 } from '../animation/timing';
 
 let busy = false;
@@ -23,21 +26,79 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function actionBannerLabel(action: CombatLastAction, enemyName: string): string {
+  if (action.label) return action.label;
+  switch (action.kind) {
+    case 'attack':
+      return `${enemyName} attacks!`;
+    case 'block':
+      return 'Enemy braces…';
+    case 'dodge':
+      return 'You dodge!';
+    case 'stun':
+      return 'Enemy is stunned!';
+    case 'status':
+      return 'Status damage';
+    default:
+      return action.actor === 'enemy' ? 'Enemy turn…' : 'Your turn';
+  }
+}
+
+function setActionBanner(root: HTMLElement, text: string): void {
+  const banner = root.querySelector<HTMLElement>('[data-turn-banner]');
+  if (!banner) return;
+  banner.textContent = text;
+  root.dataset.actionBanner = 'true';
+  banner.hidden = false;
+}
+
+function hideActionBanner(root: HTMLElement): void {
+  delete root.dataset.actionBanner;
+  const banner = root.querySelector<HTMLElement>('[data-turn-banner]');
+  if (banner) banner.hidden = true;
+}
+
+function enemyFighterEl(
+  root: HTMLElement,
+  action: CombatLastAction | undefined,
+): HTMLElement | null {
+  if (action?.targetInstanceId) {
+    return root.querySelector<HTMLElement>(
+      `[data-enemy-instance="${action.targetInstanceId}"]`,
+    );
+  }
+  return root.querySelector<HTMLElement>('[data-enemy-instance]');
+}
+
+function allEnemyFighters(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('[data-enemy-instance]')];
+}
+
 function playActionAnimations(
   root: HTMLElement,
   action: CombatLastAction | undefined,
+  enemyName: string,
+  showBanner: boolean,
 ): Promise<void> {
   if (!action) return delay(animMs(80));
 
   const playerFighter = root.querySelector<HTMLElement>('[data-fighter="player"]');
-  const enemyFighter = root.querySelector<HTMLElement>('[data-fighter="enemy"]');
+  const enemyFighter = enemyFighterEl(root, action);
+  const aoeEnemyHits =
+    action.actor === 'player' && action.damage && action.aoe ? allEnemyFighters(root) : [];
+
+  if (showBanner) {
+    setActionBanner(root, actionBannerLabel(action, enemyName));
+  }
 
   const hitTarget =
-    action.actor === 'player' && action.damage
-      ? enemyFighter
-      : action.actor === 'enemy' && action.damage
-        ? playerFighter
-        : null;
+    action.actor === 'enemy' && action.damage
+      ? playerFighter
+      : aoeEnemyHits.length > 1
+        ? null
+        : action.actor === 'player' && action.damage
+          ? enemyFighter
+          : null;
   const lungeActor =
     action.actor === 'player' && (action.kind === 'attack' || action.kind === 'skill')
       ? playerFighter
@@ -45,15 +106,65 @@ function playActionAnimations(
         ? enemyFighter
         : null;
 
-  const duration = animMs(
+  let duration = animMs(
     action.actor === 'player' ? PLAYER_ACTION_ANIM_MS : ENEMY_ACTION_ANIM_MS,
   );
+  if (action.actor === 'enemy' && action.charged) {
+    duration = animMs(ENEMY_CHARGED_ACTION_ANIM_MS);
+  }
+
+  const effectClasses: string[] = [];
 
   if (lungeActor) {
-    lungeActor.classList.add(action.actor === 'player' ? 'fighter-lunge-right' : 'fighter-lunge-left');
+    if (action.actor === 'player') {
+      lungeActor.classList.add('fighter-lunge-right');
+      effectClasses.push('fighter-lunge-right');
+    } else if (action.charged) {
+      lungeActor.classList.add('fighter-lunge-left--charged');
+      effectClasses.push('fighter-lunge-left--charged');
+    } else {
+      lungeActor.classList.add('fighter-lunge-left');
+      effectClasses.push('fighter-lunge-left');
+    }
+  } else if (action.actor === 'enemy') {
+    if (action.kind === 'block' && enemyFighter) {
+      enemyFighter.classList.add('fighter-brace');
+      effectClasses.push('fighter-brace');
+    } else if (action.kind === 'stun' && enemyFighter) {
+      enemyFighter.classList.add('fighter-stunned');
+      effectClasses.push('fighter-stunned');
+    } else if (action.kind === 'dodge' && playerFighter) {
+      playerFighter.classList.add('fighter-dodge-flash');
+      effectClasses.push('fighter-dodge-flash');
+    }
   }
-  if (hitTarget && action.damage) {
-    hitTarget.classList.add(action.crit ? 'fighter-crit-hit' : 'fighter-hit');
+
+  const statusHitTargets =
+    action.kind === 'status' && action.damage
+      ? action.targetInstanceId
+        ? [enemyFighter].filter(Boolean) as HTMLElement[]
+        : allEnemyFighters(root)
+      : [];
+  for (const el of statusHitTargets) {
+    el.classList.add('fighter-status-hit');
+    effectClasses.push('fighter-status-hit');
+    el.querySelector<HTMLElement>('.hp-bar__fill')?.classList.add('hp-bar__fill--damage');
+  }
+
+  if (aoeEnemyHits.length > 1 && action.damage) {
+    for (const el of aoeEnemyHits) {
+      const hitClass = action.crit ? 'fighter-crit-hit' : 'fighter-hit';
+      el.classList.add(hitClass);
+      el.querySelector<HTMLElement>('.hp-bar__fill')?.classList.add('hp-bar__fill--damage');
+      const popup = document.createElement('span');
+      popup.className = 'damage-popup' + (action.crit ? ' damage-popup--crit' : '');
+      popup.textContent = `-${action.damage}`;
+      el.appendChild(popup);
+    }
+  } else if (hitTarget && action.damage) {
+    const hitClass = action.crit ? 'fighter-crit-hit' : 'fighter-hit';
+    hitTarget.classList.add(hitClass);
+    effectClasses.push(hitClass);
     hitTarget.querySelector<HTMLElement>('.hp-bar__fill')?.classList.add('hp-bar__fill--damage');
     const popup = document.createElement('span');
     popup.className = 'damage-popup' + (action.crit ? ' damage-popup--crit' : '');
@@ -69,10 +180,23 @@ function playActionAnimations(
   }
 
   return delay(duration).then(() => {
-    lungeActor?.classList.remove('fighter-lunge-right', 'fighter-lunge-left');
-    hitTarget?.classList.remove('fighter-hit', 'fighter-crit-hit');
-    hitTarget?.querySelector('.hp-bar__fill')?.classList.remove('hp-bar__fill--damage');
-    hitTarget?.querySelector('.damage-popup')?.remove();
+    for (const cls of effectClasses) {
+      playerFighter?.classList.remove(cls);
+      enemyFighter?.classList.remove(cls);
+      for (const el of aoeEnemyHits) el.classList.remove(cls);
+      for (const el of statusHitTargets) el.classList.remove(cls);
+    }
+    const cleanupEls = [
+      hitTarget,
+      enemyFighter,
+      ...aoeEnemyHits,
+      ...statusHitTargets,
+    ].filter(Boolean) as HTMLElement[];
+    for (const el of cleanupEls) {
+      el.querySelector('.hp-bar__fill')?.classList.remove('hp-bar__fill--damage');
+      el.querySelector('.damage-popup')?.remove();
+    }
+    if (showBanner) hideActionBanner(root);
   });
 }
 
@@ -81,17 +205,11 @@ function updateCombatDom(root: HTMLElement, state: GameState): void {
   const combat = run.combat!;
 
   const playerFighter = root.querySelector<HTMLElement>('[data-fighter="player"]')!;
-  const enemyFighter = root.querySelector<HTMLElement>('[data-fighter="enemy"]')!;
 
   playerFighter.querySelector('[data-hp-text]')!.textContent =
     `${run.player.hp} / ${run.player.stats.maxHp} HP`;
   playerFighter.querySelector<HTMLElement>('.hp-bar__fill')!.style.width =
     `${(run.player.hp / run.player.stats.maxHp) * 100}%`;
-
-  enemyFighter.querySelector('[data-hp-text]')!.textContent =
-    `${combat.enemyHp} / ${combat.enemyMaxHp} HP`;
-  enemyFighter.querySelector<HTMLElement>('.hp-bar__fill')!.style.width =
-    `${(combat.enemyHp / combat.enemyMaxHp) * 100}%`;
 
   const pb = playerFighter.querySelector('[data-badges]')!;
   pb.replaceChildren(
@@ -101,19 +219,36 @@ function updateCombatDom(root: HTMLElement, state: GameState): void {
     }),
   );
 
-  const eb = enemyFighter.querySelector('[data-badges]')!;
-  eb.replaceChildren(
-    StatusBadges({
-      statuses: combat.enemyStatuses,
-      stunned: combat.enemyStunned,
-    }),
-  );
+  for (const instance of combat.enemies) {
+    const fighter = root.querySelector<HTMLElement>(
+      `[data-enemy-instance="${instance.instanceId}"]`,
+    );
+    if (!fighter) continue;
+    fighter.querySelector('[data-hp-text]')!.textContent =
+      `${instance.hp} / ${instance.maxHp} HP`;
+    fighter.querySelector<HTMLElement>('.hp-bar__fill')!.style.width =
+      `${(instance.hp / instance.maxHp) * 100}%`;
+    fighter.classList.toggle(
+      'combat-fighter--target',
+      pickLowestHpTargetIndex(combat) ===
+        combat.enemies.findIndex((e) => e.instanceId === instance.instanceId),
+    );
+    fighter.classList.toggle('combat-fighter--defeated', instance.hp <= 0);
+    const badges = fighter.querySelector('[data-badges]')!;
+    badges.replaceChildren(
+      StatusBadges({
+        statuses: instance.statuses,
+        stunned: instance.stunned,
+      }),
+    );
+  }
 
   const logHost = root.querySelector('[data-combat-log]')!;
   const newCount = Math.max(0, combat.log.length - lastLogLength);
   const newLog = CombatLog(combat.log, newCount);
   newLog.dataset.combatLog = '';
   logHost.replaceWith(newLog);
+  scrollCombatLogToLatest(newLog);
   lastLogLength = combat.log.length;
 
   const banner = root.querySelector<HTMLElement>('[data-turn-banner]');
@@ -121,7 +256,12 @@ function updateCombatDom(root: HTMLElement, state: GameState): void {
   const showActions = !combat.finished && combat.turn === 'player' && !busy;
 
   if (banner) {
-    banner.hidden = !(busy && combat.turn === 'enemy' && !combat.finished);
+    const showActionBanner = root.dataset.actionBanner === 'true';
+    banner.hidden = !(
+      busy &&
+      !combat.finished &&
+      (showActionBanner || combat.turn === 'enemy')
+    );
   }
   if (actions) {
     actions.hidden = !showActions;
@@ -163,10 +303,12 @@ function buildFighter(
   hp: number,
   maxHp: number,
   enemyFill?: boolean,
+  instanceId?: string,
 ): HTMLElement {
   const div = document.createElement('div');
   div.className = 'combat-fighter';
   div.dataset.fighter = side;
+  if (instanceId) div.dataset.enemyInstance = instanceId;
   div.appendChild(AssetImage(imageKey, 'card__image', name));
   const title = document.createElement('h3');
   title.textContent = name;
@@ -199,8 +341,8 @@ function orderedAttackSkills(run: GameState['run']) {
   }
   if (basicId) {
     attacks.sort((a, b) => {
-      if (a.owned.id === basicId) return -1;
-      if (b.owned.id === basicId) return 1;
+      if (a.owned.id === basicId) return 1;
+      if (b.owned.id === basicId) return -1;
       return 0;
     });
   }
@@ -209,7 +351,7 @@ function orderedAttackSkills(run: GameState['run']) {
 
 function buildActions(engine: GameEngine, run: GameState['run'], combat: CombatState): HTMLElement {
   const actions = document.createElement('div');
-  actions.className = 'btn-row';
+  actions.className = 'btn-row btn-row--combat';
   actions.dataset.actions = '';
 
   const { attacks, basicId } = orderedAttackSkills(run);
@@ -236,10 +378,36 @@ function buildActions(engine: GameEngine, run: GameState['run'], combat: CombatS
   return actions;
 }
 
+function appendEnemyFighter(
+  parent: HTMLElement,
+  instance: CombatEnemyInstance,
+  combat: CombatState,
+): void {
+  const def = getEnemy(instance.enemyId);
+  const div = buildFighter(
+    'enemy',
+    def?.name ?? 'Enemy',
+    def?.imageKey ?? 'enemy',
+    instance.hp,
+    instance.maxHp,
+    true,
+    instance.instanceId,
+  );
+  div.querySelector('[data-badges]')!.appendChild(
+    StatusBadges({ statuses: instance.statuses, stunned: instance.stunned }),
+  );
+  if (
+    pickLowestHpTargetIndex(combat) ===
+    combat.enemies.findIndex((e) => e.instanceId === instance.instanceId)
+  ) {
+    div.classList.add('combat-fighter--target');
+  }
+  parent.appendChild(div);
+}
+
 function createCombatRoot(engine: GameEngine, state: GameState): HTMLElement {
   const { run } = state;
   const combat = run.combat!;
-  const enemy = getEnemy(combat.enemyId)!;
   const classDef = getClass(run.player.classId);
 
   const el = document.createElement('div');
@@ -265,20 +433,14 @@ function createCombatRoot(engine: GameEngine, state: GameState): HTMLElement {
     StatusBadges({ statuses: combat.playerStatuses, dodgeNext: combat.playerDodgeNext }),
   );
 
-  const enemyDiv = buildFighter(
-    'enemy',
-    enemy.name,
-    enemy.imageKey,
-    combat.enemyHp,
-    combat.enemyMaxHp,
-    true,
-  );
-  enemyDiv.querySelector('[data-badges]')!.appendChild(
-    StatusBadges({ statuses: combat.enemyStatuses, stunned: combat.enemyStunned }),
-  );
+  const enemiesWrap = document.createElement('div');
+  enemiesWrap.className = 'combat-enemies';
+  for (const instance of combat.enemies) {
+    appendEnemyFighter(enemiesWrap, instance, combat);
+  }
 
   area.appendChild(playerDiv);
-  area.appendChild(enemyDiv);
+  area.appendChild(enemiesWrap);
 
   const banner = document.createElement('div');
   banner.className = 'combat-turn-banner';
@@ -313,24 +475,49 @@ async function processCombatUpdate(
 
   const playerJustActed = prev?.turn === 'player' && combat.turn === 'enemy' && !combat.finished;
   const enemyJustActed = prev?.turn === 'enemy' && combat.turn === 'player' && !combat.finished;
+  const enemyPhaseContinues =
+    prev?.turn === 'enemy' && combat.turn === 'enemy' && !combat.finished && !!combat.lastAction;
   const justFinished = combat.finished && !prev?.finished;
+  const enemyName = enemyDisplayLabel(combat);
 
   if (playerJustActed && !combat.finished) {
     busy = true;
     updateCombatDom(root, state);
-    await playActionAnimations(root, combat.lastAction);
+    await playActionAnimations(root, combat.lastAction, enemyName, false);
     engine.clearCombatLastAction();
     updateCombatDom(root, engine.getState());
-    await delay(animMs(ENEMY_TURN_BANNER_MS));
-    engine.resolveEnemyTurn();
+    setActionBanner(root, 'Enemy turn…');
+    updateCombatDom(root, engine.getState());
+    if (!prefersReducedMotion()) {
+      await delay(animMs(ENEMY_TURN_BANNER_MS));
+    }
+    hideActionBanner(root);
+
+    while (true) {
+      engine.resolveEnemyTurn();
+      const after = engine.getState();
+      const c = after.run.combat;
+      if (!c || c.finished || c.turn === 'player') break;
+      updateCombatDom(root, after);
+      if (c.lastAction) {
+        const label =
+          getEnemy(
+            c.enemies.find((e) => e.instanceId === c.lastAction?.targetInstanceId)?.enemyId ??
+              c.enemies[0]?.enemyId ??
+              '',
+          )?.name ?? enemyName;
+        await playActionAnimations(root, c.lastAction, label, true);
+        engine.clearCombatLastAction();
+      }
+    }
     busy = false;
     return;
   }
 
-  if (enemyJustActed && combat.lastAction) {
+  if ((enemyJustActed || enemyPhaseContinues) && combat.lastAction) {
     busy = true;
     updateCombatDom(root, state);
-    await playActionAnimations(root, combat.lastAction);
+    await playActionAnimations(root, combat.lastAction, enemyName, true);
     engine.clearCombatLastAction();
     updateCombatDom(root, engine.getState());
     busy = false;

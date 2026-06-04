@@ -43,7 +43,8 @@ export const longswordShieldBash: SkillDef = {
     return {
       damage: dmg,
       stun: true,
-      logMessage: `Shield Bash deals ${dmg} and stuns the enemy!`,
+      grantBlock: level >= 3 ? 4 : 0,
+      logMessage: `Shield Bash deals ${dmg} and stuns the enemy!${level >= 3 ? ' (+4 block)' : ''}`,
     };
   },
 };
@@ -65,7 +66,7 @@ export const riposte: SkillDef = {
   ],
   onUse: (ctx, level) => ({
     dodgeNext: true,
-    damage: Math.floor(ctx.player.stats.attack * [0.5, 0.75, 1.0][level - 1]),
+    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.5, 0.75, 1.0][level - 1]),
     logMessage: 'You brace for a Riposte!',
   }),
 };

@@ -42,7 +42,7 @@ export const toxicCloud: SynergyDef = {
   description: '2+ Poison skills: +15% damage',
   requiredTags: ['poison'],
   minCount: 2,
-  effect: () => ({ damageMultiplier: 1.15 }),
+  effect: () => ({ poisonMultiplier: 1.15 }),
 };
 
 export const allSynergies = [inferno, hemorrhage, assassinsMark, arcaneConduit, toxicCloud];

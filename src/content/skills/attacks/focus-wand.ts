@@ -67,7 +67,11 @@ export const pierceRay: SkillDef = {
   onUse: (ctx, level) => {
     const mult = [1.25, 1.45, 1.7][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
-    return { damage: dmg, logMessage: `Pierce Ray burns through for ${dmg}!` };
+    return {
+      damage: dmg,
+      pierceNext: true,
+      logMessage: `Pierce Ray burns through for ${dmg}!`,
+    };
   },
 };
 

@@ -109,7 +109,11 @@ export function combatSkillScore(state: GameState, skillId: string): number {
   const cooldown = getSkillCooldown(skillId, owned.level);
   let score = damage / (cooldown + 1);
 
-  if (damage >= combat.enemyHp) score += 50;
+  const totalHp = combat.enemies.reduce((s, e) => s + e.hp, 0);
+  if (damage >= totalHp) score += 50;
+  const living = combat.enemies.filter((e) => e.hp > 0).length;
+  const skill = getSkill(skillId);
+  if (living > 1 && skill?.tags.includes('aoe') && damage > 0) score += 25;
 
   const basic = isBasicAttack(state, skillId);
   if (!basic && damage > 0) score += 15;

@@ -18,6 +18,19 @@ export function CombatLog(entries: CombatLogEntry[], newEntryCount = 0): HTMLEle
     el.appendChild(line);
   });
 
-  el.scrollTop = el.scrollHeight;
   return el;
+}
+
+/** Scroll combat log so the newest (bottom) entry is visible. Call after the node is in the DOM. */
+export function scrollCombatLogToLatest(logEl: HTMLElement): void {
+  const scrollToBottom = () => {
+    logEl.scrollTop = logEl.scrollHeight - logEl.clientHeight;
+  };
+  scrollToBottom();
+  requestAnimationFrame(() => {
+    scrollToBottom();
+    requestAnimationFrame(scrollToBottom);
+  });
+  // New lines animate in over ~300ms and can change scroll height after layout.
+  setTimeout(scrollToBottom, 320);
 }

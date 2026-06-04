@@ -152,6 +152,22 @@ h1, h2, h3 {
   margin-top: 1rem;
 }
 
+.btn-row--combat {
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.btn-row--combat .tooltip-wrap--action:first-child .tooltip--action {
+  left: 0;
+  transform: none;
+}
+
+.btn-row--combat .tooltip-wrap--action:last-child .tooltip--action {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 .stat-row {
   display: flex;
   justify-content: space-between;
@@ -190,6 +206,30 @@ h1, h2, h3 {
   margin-bottom: 1.5rem;
 }
 
+.combat-enemies {
+  display: flex;
+  flex: 2;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.combat-enemies .combat-fighter {
+  flex: 1;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.combat-fighter--target {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.combat-fighter--defeated {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+
 .combat-fighter {
   flex: 1;
   min-width: 200px;
@@ -197,6 +237,7 @@ h1, h2, h3 {
   border-radius: var(--radius);
   padding: 1rem;
   text-align: center;
+  overflow: visible;
 }
 
 .combat-log {
@@ -284,6 +325,7 @@ h1, h2, h3 {
   justify-content: center;
   margin-top: 0.5rem;
   min-height: 0;
+  overflow: visible;
 }
 
 .status-badge {
@@ -303,6 +345,16 @@ h1, h2, h3 {
 .status-badge--burn {
   border-color: rgba(240, 165, 0, 0.5);
   color: var(--warning);
+}
+
+.status-badge--mark {
+  border-color: rgba(180, 120, 255, 0.55);
+  color: #c9a0ff;
+}
+
+.status-badge--weaken {
+  border-color: rgba(140, 160, 200, 0.5);
+  color: #9eb4d4;
 }
 
 .status-badge--poison {
@@ -334,6 +386,18 @@ h1, h2, h3 {
   display: block;
   width: 100%;
   max-width: 100%;
+}
+
+.tooltip-wrap--badge {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.tooltip--badge {
+  min-width: 200px;
+  max-width: 280px;
+  font-size: 0.8rem;
+  z-index: 250;
 }
 
 .stats-panel__skills {

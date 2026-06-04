@@ -1,5 +1,4 @@
 import type { SkillDef } from '../../../types/definitions';
-import { getSkill } from '../../registries';
 
 export const keenEye: SkillDef = {
   id: 'keen-eye',
@@ -24,9 +23,9 @@ export const hemophilia: SkillDef = {
   classId: 'rogue',
   maxLevel: 3,
   levelDescriptions: [
-    'Bleed lasts +1 turn.',
-    'Bleed lasts +1 turn, +1 stack on apply.',
-    'Bleed lasts +2 turns, +1 stack on apply.',
+    'Bleed lasts +1 turn, +1 damage per stack.',
+    'Bleed lasts +1 turn, +1 stack on apply, +2 damage per stack.',
+    'Bleed lasts +2 turns, +1 stack on apply, +3 damage per stack.',
   ],
   onPassive: () => [],
 };
@@ -34,22 +33,18 @@ export const hemophilia: SkillDef = {
 export const toxicBlood: SkillDef = {
   id: 'toxic-blood',
   name: 'Toxic Blood',
-  description: 'Poison you apply hits harder.',
+  description: 'Poison damage you deal ticks harder.',
   imageKey: 'poison-dart',
   type: 'passive',
   tags: ['poison'],
   classId: 'rogue',
   maxLevel: 3,
   levelDescriptions: [
-    '+2 attack while you own a poison attack.',
-    '+4 attack while you own a poison attack.',
-    '+6 attack while you own a poison attack.',
+    '+25% poison damage.',
+    '+40% poison damage.',
+    '+55% poison damage.',
   ],
-  onPassive: (ctx, level) => {
-    const ownsPoison = ctx.ownedSkills.some((os) => getSkill(os.id)?.tags.includes('poison'));
-    const atk = ownsPoison ? [2, 4, 6][level - 1] : 0;
-    return [{ stat: 'attack', flat: atk }];
-  },
+  onPassive: () => [],
 };
 
 export const roguePassives = [keenEye, hemophilia, toxicBlood];

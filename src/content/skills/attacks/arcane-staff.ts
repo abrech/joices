@@ -21,7 +21,8 @@ export const fireball: SkillDef = {
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'burn', stacks: level >= 2 ? 2 : 1 },
-      logMessage: `Fireball explodes for ${dmg} damage!`,
+      aoe: true,
+      logMessage: `Fireball explodes for ${dmg} on each foe!`,
     };
   },
 };
@@ -48,7 +49,8 @@ export const flameWave: SkillDef = {
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'burn', stacks },
-      logMessage: `Flame Wave scorches for ${dmg}!`,
+      aoe: true,
+      logMessage: `Flame Wave scorches each foe for ${dmg}!`,
     };
   },
 };
@@ -70,12 +72,20 @@ export const scorch: SkillDef = {
   ],
   onUse: (ctx, level) => {
     const mult = [0.7, 0.85, 1.0][level - 1];
-    const stacks = [3, 4, 4][level - 1];
+    let stacks = [3, 4, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
+    const target =
+      ctx.combat.enemies[ctx.combat.targetIndex] ?? ctx.combat.enemies[0];
+    const existingBurn = target?.statuses.find((s) => s.type === 'burn');
+    if (existingBurn) {
+      stacks += Math.floor(existingBurn.stacks * 0.5);
+    }
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'burn', stacks },
-      logMessage: `Scorch sears for ${dmg}!`,
+      logMessage: existingBurn
+        ? `Scorch amplifies burn and deals ${dmg}!`
+        : `Scorch sears for ${dmg}!`,
     };
   },
 };

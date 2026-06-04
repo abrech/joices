@@ -11,7 +11,7 @@ export const bossEvent: EventDef = {
   tags: ['combat', 'boss'],
   weight: 100,
   canAppear: (ctx) => isBossFloor(ctx.floor),
-  buildPayload: () => ({ enemyId: lich.id, isBoss: true }),
+  buildPayload: () => ({ enemyId: lich.id, enemyIds: [lich.id], isBoss: true }),
   buildOfferPreview: (ctx) => {
     const gold = scaleEnemyGold(lich.goldDrop, ctx.floor);
     return `${lich.name} · ${gold[0]}-${gold[1]} gold`;
@@ -24,7 +24,7 @@ export const bossEvent: EventDef = {
     if (ctx.combatResult === 'lose') {
       return [{ type: 'endRun', victory: false }];
     }
-    const payload = ctx.payload as { enemyId: string; isBoss?: boolean };
-    return [{ type: 'startCombat', enemyId: payload.enemyId, isBoss: payload.isBoss }];
+    const payload = ctx.payload as { enemyIds: string[]; isBoss?: boolean };
+    return [{ type: 'startCombat', enemyIds: payload.enemyIds, isBoss: payload.isBoss }];
   },
 };

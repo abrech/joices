@@ -55,6 +55,16 @@ const STATUS_GLOSSARY = [
     tags: ['debuff', 'poison'],
   },
   {
+    title: 'Mark',
+    description: 'Marked foes take 50% increased poison damage while the mark lasts.',
+    tags: ['debuff', 'poison'],
+  },
+  {
+    title: 'Weaken',
+    description: 'Weakened enemies deal less damage on their attacks (15% per stack, up to 30%).',
+    tags: ['debuff'],
+  },
+  {
     title: 'Stun',
     description: 'Enemy skips their next turn.',
     tags: ['debuff'],

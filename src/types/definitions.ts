@@ -18,12 +18,17 @@ export interface CombatEffectResult {
   damage?: number;
   heal?: number;
   applyStatus?: { target: 'enemy' | 'player'; type: StatusType; stacks?: number; duration?: number };
+  extraStatuses?: { target: 'enemy' | 'player'; type: StatusType; stacks?: number; duration?: number }[];
   stun?: boolean;
   dodgeNext?: boolean;
+  grantBlock?: number;
+  counterOnDodge?: number;
+  pierceNext?: boolean;
+  aoe?: boolean;
   logMessage?: string;
 }
 
-export type StatusType = 'bleed' | 'burn' | 'poison' | 'stun';
+export type StatusType = 'bleed' | 'burn' | 'poison' | 'stun' | 'mark' | 'weaken';
 
 export interface ClassDef {
   id: string;
@@ -105,4 +110,5 @@ export interface SynergyBonuses {
   critBonus?: number;
   spellPowerBonus?: number;
   damageMultiplier?: number;
+  poisonMultiplier?: number;
 }

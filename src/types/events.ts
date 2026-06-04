@@ -56,6 +56,7 @@ export interface HealPayload {
 
 export interface CombatPayload {
   enemyId: string;
+  enemyIds: string[];
   isBoss?: boolean;
   isElite?: boolean;
 }
@@ -88,7 +89,7 @@ export type GameEffect =
   | { type: 'upgradeSkill'; skillId: string }
   | { type: 'addGold'; amount: number }
   | { type: 'modifyStat'; stat: keyof Stats; delta: number }
-  | { type: 'startCombat'; enemyId: string; isBoss?: boolean }
+  | { type: 'startCombat'; enemyIds: string[]; isBoss?: boolean }
   | { type: 'advanceFloor' }
   | { type: 'endRun'; victory: boolean }
   | { type: 'custom'; handlerId: string; payload: unknown };

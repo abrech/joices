@@ -27,21 +27,29 @@ export function FloorChoiceScreen(engine: GameEngine): HTMLElement {
   run.floorOptions.forEach((option, index) => {
     let preview = option.preview;
     if (option.eventId === 'enemy' || option.eventId === 'boss') {
-      const payload = option.payload as { enemyId: string };
-      const enemy = getEnemy(payload.enemyId);
-      if (enemy) {
+      const payload = option.payload as { enemyId: string; enemyIds?: string[] };
+      const ids = payload.enemyIds ?? [payload.enemyId];
+      let totalHp = 0;
+      let maxAtk = 0;
+      for (const id of ids) {
+        const enemy = getEnemy(id);
+        if (!enemy) continue;
         const scaled = scaledEnemyStats(
           enemy.baseStats.maxHp,
           enemy.baseStats.attack,
           run.floor,
           enemy.tier,
         );
+        totalHp += scaled.hp;
+        maxAtk = Math.max(maxAtk, scaled.attack);
+      }
+      if (totalHp > 0) {
         const threat = calcThreatLevel(
           playerPower(run.player.stats, run.player.hp),
-          scaled.hp,
-          scaled.attack,
+          totalHp,
+          maxAtk,
         );
-        const base = preview ?? enemy.name;
+        const base = preview ?? option.name;
         preview = `${base} · Threat: ${threat.charAt(0).toUpperCase() + threat.slice(1)}`;
       }
     }

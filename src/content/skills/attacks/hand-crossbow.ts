@@ -49,7 +49,8 @@ export const markedShot: SkillDef = {
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },
-      logMessage: `Marked Shot deals ${dmg}!`,
+      extraStatuses: [{ target: 'enemy', type: 'mark', stacks: 1, duration: 3 }],
+      logMessage: `Marked Shot marks the foe and deals ${dmg}!`,
     };
   },
 };
@@ -76,7 +77,8 @@ export const volley: SkillDef = {
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },
-      logMessage: `Volley rains down for ${dmg}!`,
+      aoe: true,
+      logMessage: `Volley rains down for ${dmg} on each foe!`,
     };
   },
 };

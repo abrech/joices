@@ -69,7 +69,8 @@ export const shockwave: SkillDef = {
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'bleed', stacks: level >= 2 ? 2 : 1 },
-      logMessage: `Shockwave erupts for ${dmg}!`,
+      extraStatuses: [{ target: 'enemy', type: 'weaken', stacks: 1, duration: 2 }],
+      logMessage: `Shockwave weakens the foe and deals ${dmg}!`,
     };
   },
 };

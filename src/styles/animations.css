@@ -78,6 +78,7 @@
 /* Combat */
 .combat-screen {
   position: relative;
+  overflow: visible;
 }
 
 .combat-screen--busy .btn-row {
@@ -129,6 +130,26 @@
   animation: lunge-left 0.35s ease;
 }
 
+.fighter-lunge-left--charged {
+  animation: lunge-left-charged 0.45s ease;
+}
+
+.fighter-brace {
+  animation: fighter-brace 0.4s ease;
+}
+
+.fighter-stunned {
+  animation: fighter-stunned 0.45s ease;
+}
+
+.fighter-dodge-flash {
+  animation: fighter-dodge-flash 0.4s ease;
+}
+
+.fighter-status-hit {
+  animation: fighter-shake 0.35s ease;
+}
+
 @keyframes lunge-right {
   0%,
   100% {
@@ -146,6 +167,46 @@
   }
   40% {
     transform: translateX(-14px);
+  }
+}
+
+@keyframes lunge-left-charged {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  35% {
+    transform: translateX(-22px) scale(1.02);
+  }
+}
+
+@keyframes fighter-brace {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.96) translateX(4px);
+  }
+}
+
+@keyframes fighter-stunned {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes fighter-dodge-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.5);
   }
 }
 
@@ -324,6 +385,11 @@
   .modal-panel,
   .fighter-lunge-right,
   .fighter-lunge-left,
+  .fighter-lunge-left--charged,
+  .fighter-brace,
+  .fighter-stunned,
+  .fighter-dodge-flash,
+  .fighter-status-hit,
   .fighter-hit,
   .fighter-crit-hit,
   .hp-bar__fill--damage,

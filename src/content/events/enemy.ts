@@ -30,6 +30,6 @@ export const enemyEvent: EventDef = {
       return [{ type: 'endRun', victory: false }];
     }
     const payload = ctx.payload as CombatPayload;
-    return [{ type: 'startCombat', enemyId: payload.enemyId }];
+    return [{ type: 'startCombat', enemyIds: payload.enemyIds }];
   },
 };
