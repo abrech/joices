@@ -34,6 +34,13 @@ export interface CombatLogEntry {
   type: 'player' | 'enemy' | 'system' | 'crit';
 }
 
+export interface CombatLastAction {
+  actor: 'player' | 'enemy';
+  kind: 'attack' | 'skill' | 'status' | 'dodge' | 'block' | 'stun';
+  damage?: number;
+  crit?: boolean;
+}
+
 export interface CombatState {
   enemyId: string;
   enemyHp: number;
@@ -51,6 +58,7 @@ export interface CombatState {
   goldReward: number;
   finished: boolean;
   result?: 'win' | 'lose';
+  lastAction?: CombatLastAction;
 }
 
 export interface ActiveEvent {
@@ -74,6 +82,44 @@ export interface RunPacing {
   combatsThisRun: number;
 }
 
+export const RUN_LOG_VERSION = 1;
+export const MAX_STORED_RUN_LOGS = 30;
+
+export type RunActionPayload =
+  | { kind: 'selectClass'; classId: string }
+  | { kind: 'selectWeapon'; weaponId: string }
+  | { kind: 'pickFloor'; index: number; eventId: string }
+  | { kind: 'combatAttack' }
+  | { kind: 'combatSkill'; skillId: string }
+  | { kind: 'claimLoot' }
+  | { kind: 'selectSkill'; skillId: string }
+  | { kind: 'skipSkillPick' }
+  | { kind: 'buyShop'; itemId: string }
+  | { kind: 'leaveShop' }
+  | { kind: 'confirmHeal' }
+  | { kind: 'combatDefeatContinue' };
+
+export type RunAction = RunActionPayload & {
+  seq: number;
+  rngStateAfter?: number;
+};
+
+export interface RunRecord {
+  id: string;
+  logVersion: typeof RUN_LOG_VERSION;
+  startedAt: number;
+  endedAt: number;
+  rngSeed: number;
+  finalRngState: number;
+  classId: string;
+  weaponId: string;
+  floorReached: number;
+  runGoldEarned: number;
+  victory: boolean;
+  skills: OwnedSkill[];
+  actions: RunAction[];
+}
+
 export interface RunState {
   floor: number;
   player: PlayerState;
@@ -87,6 +133,9 @@ export interface RunState {
   runGoldEarned: number;
   victory?: boolean;
   newSynergyToast?: string;
+  runLogId?: string;
+  runStartedAt?: number;
+  actionLog?: RunAction[];
 }
 
 export interface ProfileState {
@@ -95,7 +144,9 @@ export interface ProfileState {
   unlockedClassIds?: string[];
   unlockedWeaponIds?: string[];
   permanentUpgrades?: Record<string, number>;
+  /** @deprecated Migrated to runLogs on profile v2 */
   runHistory?: { floorReached: number; classId: string; victory: boolean }[];
+  runLogs?: RunRecord[];
 }
 
 export interface GameState {
@@ -103,7 +154,7 @@ export interface GameState {
   profile: ProfileState;
 }
 
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 
 export function createInitialPacing(): RunPacing {
   return { combatsThisRun: 0 };

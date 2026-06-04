@@ -30,6 +30,7 @@ export interface SkillPickPayload {
   label: string;
   skills: string[];
   allowSkip?: boolean;
+  afterCombatLoot?: boolean;
 }
 
 export interface ShopPayload {
@@ -60,12 +61,14 @@ export interface CombatPayload {
 }
 
 export interface LootItem {
-  type: 'gold' | 'skill' | 'heal';
+  type: 'gold' | 'skill' | 'heal' | 'stat';
   name: string;
   description?: string;
   imageKey?: string;
   amount?: number;
   skillId?: string;
+  stat?: keyof Stats;
+  statDelta?: number;
 }
 
 export interface LootPayload {
@@ -75,6 +78,7 @@ export interface LootPayload {
   isElite?: boolean;
   isBoss?: boolean;
   items: LootItem[];
+  skillChoices?: string[];
 }
 
 export type GameEffect =

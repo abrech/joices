@@ -42,6 +42,14 @@ export function getAllSkills(): SkillDef[] {
   return allSkills;
 }
 
+export function getAttacksForWeapon(weaponId: string): SkillDef[] {
+  return allSkills.filter((s) => s.type === 'attack' && s.weaponId === weaponId);
+}
+
+export function getPassivesForClass(classId: string): SkillDef[] {
+  return allSkills.filter((s) => s.type === 'passive' && s.classId === classId);
+}
+
 export function getEnemy(id: string): EnemyDef | undefined {
   return enemyMap.get(id);
 }

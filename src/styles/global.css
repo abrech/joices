@@ -1,4 +1,5 @@
 @import './variables.css';
+@import './glossary.css';
 
 *,
 *::before,
@@ -34,7 +35,8 @@ h1, h2, h3 {
 
 .layout {
   display: flex;
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .layout-main {
@@ -180,6 +182,7 @@ h1, h2, h3 {
 }
 
 .combat-area {
+  position: relative;
   display: flex;
   gap: 2rem;
   align-items: flex-start;
@@ -226,6 +229,7 @@ h1, h2, h3 {
 }
 
 .toast {
+  animation: toast-in 0.35s ease;
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
@@ -234,7 +238,6 @@ h1, h2, h3 {
   border-radius: var(--radius);
   padding: 1rem 1.5rem;
   box-shadow: var(--shadow);
-  animation: toast-in 0.3s ease;
   z-index: 1000;
   max-width: 320px;
 }

@@ -1,5 +1,5 @@
 import type { GameEngine } from '../../game/GameEngine';
-import { getEnemy, getSkill, getClass } from '../../content/registries';
+import { getEnemy, getSkill, getClass, getWeapon } from '../../content/registries';
 import { getSkillDescription } from '../../game/systems/SkillSystem';
 import { AssetImage } from '../components/AssetImage';
 import { CombatLog } from '../components/CombatLog';
@@ -76,19 +76,27 @@ export function CombatScreen(engine: GameEngine): HTMLElement {
   if (!combat.finished && combat.turn === 'player') {
     const actions = document.createElement('div');
     actions.className = 'btn-row';
-
-    const attackBtn = document.createElement('button');
-    attackBtn.className = 'btn btn--primary';
-    attackBtn.textContent = 'Attack';
-    attackBtn.addEventListener('click', () => engine.combatAttack());
-    actions.appendChild(attackBtn);
-
+    const basicId = getWeapon(run.player.weaponId)?.starterAttackId;
+    const attackSkills: { owned: (typeof run.player.skills)[number]; skill: NonNullable<ReturnType<typeof getSkill>> }[] =
+      [];
     for (const owned of run.player.skills) {
       const skill = getSkill(owned.id);
-      if (skill?.type !== 'active') continue;
+      if (skill?.type !== 'attack') continue;
+      attackSkills.push({ owned, skill });
+    }
+    if (basicId) {
+      attackSkills.sort((a, b) => {
+        if (a.owned.id === basicId) return -1;
+        if (b.owned.id === basicId) return 1;
+        return 0;
+      });
+    }
+
+    for (const { owned, skill } of attackSkills) {
       const cd = combat.skillCooldowns[owned.id] ?? 0;
+      const isBasic = owned.id === basicId;
       const btn = document.createElement('button');
-      btn.className = 'btn btn--secondary';
+      btn.className = isBasic ? 'btn btn--primary' : 'btn btn--secondary';
       btn.textContent = cd > 0 ? `${skill.name} (CD: ${cd})` : skill.name;
       btn.disabled = cd > 0;
       btn.addEventListener('click', () => engine.combatUseSkill(owned.id));

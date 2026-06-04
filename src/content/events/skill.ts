@@ -1,102 +1,104 @@
 import type { EventDef, SkillPickPayload } from '../../types/events';
-import { getAllSkills } from '../registries';
-import { defaultSkillFilter } from './enemy';
-import { WEIGHT_SKILL_OFFER, WEIGHT_SKILL_UPGRADE } from '../../game/progression/EncounterWeights';
+import { getAllSkills, getSkill } from '../registries';
+import { WEIGHT_SKILL } from '../../game/progression/EncounterWeights';
 import { isBossFloor } from '../../game/progression/PacingRules';
+import { pickSkills } from '../../game/systems/SkillPool';
+import {
+  filterTrainingChoices,
+  isUpgradeable,
+  learnableSkillFilter,
+} from '../../game/systems/SkillFilters';
 
-function pickSkills(ctx: import('../../types/events').FloorContext, count: number, filter: typeof defaultSkillFilter): string[] {
-  const owned = new Set(ctx.run.player.skills.map((s) => s.id));
-  const pool = getAllSkills().filter(
-    (s) => !owned.has(s.id) && filter(s, ctx),
-  );
-  const picked: string[] = [];
-  const available = [...pool];
-  for (let i = 0; i < count && available.length > 0; i++) {
-    const idx = Math.floor(ctx.rng() * available.length);
-    picked.push(available[idx].id);
-    available.splice(idx, 1);
-  }
-  return picked;
+function getUpgradeableSkillIds(ctx: import('../../types/events').FloorContext): string[] {
+  return ctx.run.player.skills
+    .filter((s) => {
+      const def = getSkill(s.id);
+      return def && isUpgradeable(s, def);
+    })
+    .map((s) => s.id);
 }
 
-export const skillOfferEvent: EventDef = {
-  id: 'skill-offer',
-  name: 'Skill Discovery',
-  description: 'Learn a new skill.',
-  imageKey: 'skill',
-  tags: ['skill'],
-  weight: WEIGHT_SKILL_OFFER,
-  canAppear: (ctx) => {
-    if (ctx.floor < 2 || isBossFloor(ctx.floor)) return false;
-    const owned = new Set(ctx.run.player.skills.map((s) => s.id));
-    return getAllSkills().some((s) => !owned.has(s.id) && defaultSkillFilter(s, ctx));
-  },
-  buildPayload: (ctx) => {
-    const count = ctx.floor >= 8 ? 3 : 2;
-    const skills = pickSkills(ctx, count, defaultSkillFilter);
-    return {
-      label: 'Choose a skill to learn',
-      skills,
-      allowSkip: false,
-    } satisfies SkillPickPayload;
-  },
-  buildOfferPreview: (_ctx, payload) => {
-    const p = payload as SkillPickPayload;
-    return p.skills.length > 0 ? `${p.skills.length} skills offered` : 'No new skills';
-  },
-  screen: 'skillPick',
-  resolve: (ctx) => {
-    if (ctx.playerChoice) {
-      return [
-        { type: 'addSkill', skillId: ctx.playerChoice },
-        { type: 'advanceFloor' },
-      ];
-    }
-    return [];
-  },
-};
+function shuffleIds(ids: string[], rng: () => number): string[] {
+  const arr = [...ids];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
-export const skillUpgradeEvent: EventDef = {
-  id: 'skill-upgrade',
-  name: 'Skill Upgrade',
-  description: 'Upgrade an existing skill.',
+function buildTrainingChoices(ctx: import('../../types/events').FloorContext): string[] {
+  const newSkills = pickSkills(ctx, 2, learnableSkillFilter);
+  const upgrades = shuffleIds(getUpgradeableSkillIds(ctx), ctx.rng);
+  const choices: string[] = [...newSkills];
+
+  for (const id of upgrades) {
+    if (choices.length >= 3) break;
+    if (!choices.includes(id)) choices.push(id);
+  }
+
+  if (choices.length < 3 && newSkills.length === 0) {
+    for (const id of upgrades) {
+      if (choices.length >= 3) break;
+      choices.push(id);
+    }
+  }
+
+  if (choices.length < 3) {
+    const extra = pickSkills(ctx, 3 - choices.length, learnableSkillFilter);
+    for (const id of extra) {
+      if (!choices.includes(id)) choices.push(id);
+    }
+  }
+
+  return filterTrainingChoices(ctx, choices.slice(0, 3));
+}
+
+function hasLearnableSkill(ctx: import('../../types/events').FloorContext): boolean {
+  const owned = new Set(ctx.run.player.skills.map((s) => s.id));
+  return getAllSkills().some((s) => !owned.has(s.id) && learnableSkillFilter(s, ctx));
+}
+
+export const skillTrainingEvent: EventDef = {
+  id: 'skill-training',
+  name: 'Training',
+  description: 'Learn a new attack or passive, or upgrade one you know.',
   imageKey: 'skill',
   tags: ['skill'],
-  weight: WEIGHT_SKILL_UPGRADE,
+  weight: WEIGHT_SKILL,
   canAppear: (ctx) => {
     if (ctx.floor < 2 || isBossFloor(ctx.floor)) return false;
-    return ctx.run.player.skills.some((s) => {
-      const def = getAllSkills().find((d) => d.id === s.id);
-      return def && s.level < def.maxLevel;
-    });
+    return hasLearnableSkill(ctx) || getUpgradeableSkillIds(ctx).length > 0;
   },
   buildPayload: (ctx) => {
-    const upgradeable = ctx.run.player.skills.filter((s) => {
-      const def = getAllSkills().find((d) => d.id === s.id);
-      return def && s.level < def.maxLevel;
-    });
-    const skills = upgradeable.map((s) => s.id);
+    const skills = buildTrainingChoices(ctx);
     return {
-      label: 'Choose a skill to upgrade',
+      label: 'Choose an attack or passive',
       skills,
       allowSkip: true,
     } satisfies SkillPickPayload;
   },
   buildOfferPreview: (_ctx, payload) => {
     const p = payload as SkillPickPayload;
-    return `Upgrade one of ${p.skills.length} skills`;
+    return p.skills.length > 0 ? 'New attacks, passives, and upgrades available' : 'No training available';
   },
   screen: 'skillPick',
   resolve: (ctx) => {
     if (ctx.playerChoice === '__skip__') {
       return [{ type: 'advanceFloor' }];
     }
-    if (ctx.playerChoice) {
+    if (!ctx.playerChoice) return [];
+
+    const owned = ctx.run.player.skills.some((s) => s.id === ctx.playerChoice);
+    if (owned) {
       return [
         { type: 'upgradeSkill', skillId: ctx.playerChoice },
         { type: 'advanceFloor' },
       ];
     }
-    return [];
+    return [
+      { type: 'addSkill', skillId: ctx.playerChoice },
+      { type: 'advanceFloor' },
+    ];
   },
 };

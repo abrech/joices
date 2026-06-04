@@ -18,6 +18,9 @@ export function createPlayer(
   if (classDef.starterPassiveId) {
     skills.push({ id: classDef.starterPassiveId, level: 1 });
   }
+  if (weaponDef.starterAttackId) {
+    skills.push({ id: weaponDef.starterAttackId, level: 1 });
+  }
 
   const base: PlayerState = {
     classId,

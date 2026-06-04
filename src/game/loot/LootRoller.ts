@@ -1,15 +1,22 @@
 import type { LootItem, LootPayload, CombatPayload } from '../../types/events';
+import type { Stats } from '../../types/definitions';
 import type { GameState } from '../../types/game-state';
-import { getEnemy, getAllSkills, getSkill } from '../../content/registries';
+import { getEnemy } from '../../content/registries';
+import { defaultSkillFilter } from '../../content/events/enemy';
+import { pickSkills } from '../systems/SkillPool';
 import { scaleEnemyGold } from '../progression/Scaling';
 import { nextRandom } from '../rng';
-import { defaultSkillFilter } from '../../content/events/enemy';
 import type { FloorContext } from '../../types/events';
 
-const ELITE_SKILL_DROP_CHANCE = 0.35;
-const BOSS_SKILL_DROP_CHANCE = 0.55;
 const ELITE_BONUS_GOLD_CHANCE = 0.25;
 const NORMAL_BONUS_GOLD_CHANCE = 0.1;
+
+const NORMAL_BONUS_REWARD_CHANCE = 0.28;
+const ELITE_BONUS_REWARD_CHANCE = 0.42;
+
+const BONUS_HEAL_WEIGHT = 0.4;
+const BONUS_SKILL_WEIGHT = 0.35;
+/** Remaining weight goes to stat (0.25). */
 
 function rollGoldAmount(
   goldDrop: [number, number],
@@ -21,11 +28,86 @@ function rollGoldAmount(
   return scaled[0] + (range > 0 ? Math.floor(rng() * (range + 1)) : 0);
 }
 
-function pickBonusSkill(ctx: FloorContext): string | null {
-  const owned = new Set(ctx.run.player.skills.map((s) => s.id));
-  const pool = getAllSkills().filter((s) => !owned.has(s.id) && defaultSkillFilter(s, ctx));
-  if (pool.length === 0) return null;
-  return pool[Math.floor(ctx.rng() * pool.length)].id;
+function healPercentForTier(isElite: boolean, isBoss: boolean): number {
+  if (isBoss) return 0.2;
+  if (isElite) return 0.16;
+  return 0.12;
+}
+
+function rollStatBonus(rng: () => number): { stat: keyof Stats; delta: number; name: string } {
+  if (rng() < 0.5) {
+    return { stat: 'attack', delta: 2, name: 'Sharpening Stone' };
+  }
+  return { stat: 'block', delta: 1, name: 'Reinforced Plating' };
+}
+
+function tryRollBonusType(
+  ctx: FloorContext,
+  rng: () => number,
+  isElite: boolean,
+  isBoss: boolean,
+  type: 'heal' | 'stat',
+): LootItem | null {
+  const maxHp = ctx.run.player.stats.maxHp;
+
+  if (type === 'heal') {
+    const amount = Math.floor(maxHp * healPercentForTier(isElite, isBoss));
+    if (amount <= 0) return null;
+    return {
+      type: 'heal',
+      name: isBoss ? 'Soul Essence' : 'Battle Salve',
+      amount,
+      imageKey: 'heal',
+      description: `Restore ${amount} HP`,
+    };
+  }
+
+  const { stat, delta, name } = rollStatBonus(rng);
+  const statLabel = stat === 'attack' ? 'Attack' : 'Block';
+  return {
+    type: 'stat',
+    name,
+    stat,
+    statDelta: delta,
+    imageKey: 'shop',
+    description: `+${delta} ${statLabel} permanently this run`,
+  };
+}
+
+interface CombatBonusRoll {
+  item?: LootItem;
+  skillChoices?: string[];
+}
+
+function rollCombatBonus(
+  ctx: FloorContext,
+  rng: () => number,
+  isElite: boolean,
+  isBoss: boolean,
+): CombatBonusRoll | null {
+  if (!isBoss) {
+    const chance = isElite ? ELITE_BONUS_REWARD_CHANCE : NORMAL_BONUS_REWARD_CHANCE;
+    if (rng() >= chance) return null;
+  }
+
+  const order: Array<'heal' | 'skill' | 'stat'> = ['heal', 'skill', 'stat'];
+  const roll = rng();
+  const skillThreshold = BONUS_HEAL_WEIGHT + BONUS_SKILL_WEIGHT;
+  const first: 'heal' | 'skill' | 'stat' =
+    roll < BONUS_HEAL_WEIGHT ? 'heal' : roll < skillThreshold ? 'skill' : 'stat';
+
+  for (let i = 0; i < 3; i++) {
+    const type = order[(order.indexOf(first) + i) % 3];
+    if (type === 'skill') {
+      const skillChoices = pickSkills(ctx, 2, defaultSkillFilter);
+      if (skillChoices.length >= 2) return { skillChoices };
+      continue;
+    }
+    const item = tryRollBonusType(ctx, rng, isElite, isBoss, type);
+    if (item) return { item };
+  }
+
+  return null;
 }
 
 export function rollCombatLoot(
@@ -95,30 +177,9 @@ export function rollCombatLoot(
     });
   }
 
-  const skillChance = isBoss ? BOSS_SKILL_DROP_CHANCE : isElite ? ELITE_SKILL_DROP_CHANCE : 0;
-  if (skillChance > 0 && rng() < skillChance) {
-    const skillId = pickBonusSkill(ctx);
-    if (skillId) {
-      const skill = getSkill(skillId)!;
-      items.push({
-        type: 'skill',
-        name: skill.name,
-        skillId,
-        imageKey: skill.imageKey,
-        description: skill.description,
-      });
-    }
-  }
-
-  if (isBoss && rng() < 0.3) {
-    const healAmount = Math.floor(run.player.stats.maxHp * 0.2);
-    items.push({
-      type: 'heal',
-      name: 'Soul Essence',
-      amount: healAmount,
-      imageKey: 'heart',
-      description: `Restore ${healAmount} HP`,
-    });
+  const combatBonus = rollCombatBonus(ctx, rng, isElite, isBoss);
+  if (combatBonus?.item) {
+    items.push(combatBonus.item);
   }
 
   return {
@@ -129,6 +190,7 @@ export function rollCombatLoot(
       isElite,
       isBoss,
       items,
+      skillChoices: combatBonus?.skillChoices,
     },
     state: { ...state, run: { ...run, rngState } },
   };
@@ -143,6 +205,8 @@ export function lootToEffects(items: LootItem[]): import('../../types/events').G
       effects.push({ type: 'addSkill', skillId: item.skillId });
     } else if (item.type === 'heal' && item.amount) {
       effects.push({ type: 'heal', amount: item.amount });
+    } else if (item.type === 'stat' && item.stat && item.statDelta) {
+      effects.push({ type: 'modifyStat', stat: item.stat, delta: item.statDelta });
     }
   }
   return effects;

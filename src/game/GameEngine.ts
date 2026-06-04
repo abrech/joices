@@ -1,16 +1,28 @@
-import type { GameState } from '../types/game-state';
-import type { CombatPayload, LootPayload } from '../types/events';
+import type { SkillPickPayload } from '../types/events';
+import type { GameState, RunActionPayload } from '../types/game-state';
 import {
   createEmptyProfile,
   createInitialRunState,
 } from '../types/game-state';
-import { createPlayer } from './createPlayer';
-import { generateFloorOptions } from './progression/FloorGenerator';
-import { beginEvent, completeEvent } from './events/EventResolver';
 import { profileStore } from './profile/ProfileStore';
-import { playerAttack, useSkill, applyCombatStartPassives } from './combat/CombatEngine';
-import { rollCombatLoot, lootToEffects } from './loot/LootRoller';
-import { applyEffects } from './effects/EffectApplier';
+import {
+  resolveEnemyTurn as runEnemyTurn,
+  clearCombatLastAction,
+} from './combat/CombatEngine';
+import { appendAction } from './logging/RunLogger';
+import {
+  applySelectClass,
+  applySelectWeapon,
+  applyPickFloor,
+  applyCombatSkill,
+  applyClaimLoot,
+  applyLootSkillReward,
+  applySkipCombatLootSkillPick,
+  applySkipLootSkillReward,
+  applySelectSkill,
+  openCombatLoot,
+} from './RunCommands';
+import { completeEvent } from './events/EventResolver';
 import { purchaseShopItem } from './shop/ShopPurchase';
 
 export type GameListener = (state: GameState) => void;
@@ -43,143 +55,113 @@ export class GameEngine {
     for (const l of this.listeners) l(this.state);
   }
 
-  private setState(state: GameState): void {
-    this.state = state;
+  private commit(state: GameState, action?: RunActionPayload): void {
+    const run = action ? appendAction(state.run, action) : state.run;
+    this.state = { ...state, run };
     this.emit();
   }
 
   selectClass(classId: string): void {
-    if (this.state.run.phase !== 'classSelect') return;
-    this.setState({
-      ...this.state,
-      run: { ...this.state.run, phase: 'weaponSelect', player: { ...this.state.run.player, classId } },
-    });
+    const next = applySelectClass(this.state, classId);
+    if (next === this.state) return;
+    this.commit(next, { kind: 'selectClass', classId });
   }
 
   selectWeapon(weaponId: string): void {
     if (this.state.run.phase !== 'weaponSelect') return;
-    const { classId } = this.state.run.player;
-    const player = createPlayer(classId, weaponId, this.state.profile);
-    const run = {
-      ...this.state.run,
-      player,
-      phase: 'floorChoice' as const,
-      floor: 1,
-      pacing: { combatsThisRun: 0 },
-    };
-    run.floorOptions = generateFloorOptions(run);
-    this.setState({ ...this.state, run });
+    const next = applySelectWeapon(this.state, weaponId);
+    this.commit(next, { kind: 'selectWeapon', weaponId });
   }
 
   selectFloorOption(index: number): void {
-    if (this.state.run.phase !== 'floorChoice') return;
     const option = this.state.run.floorOptions[index];
-    if (!option) return;
-
-    let state = beginEvent(this.state, option.eventId, option.payload);
-
-    if (state.run.combat) {
-      state = { ...state, run: applyCombatStartPassives(state.run) };
-    }
-
-    this.setState(state);
+    if (!option || this.state.run.phase !== 'floorChoice') return;
+    const next = applyPickFloor(this.state, index);
+    this.commit(next, { kind: 'pickFloor', index, eventId: option.eventId });
   }
 
   confirmHeal(): void {
-    this.setState(completeEvent(this.state));
+    this.commit(completeEvent(this.state), { kind: 'confirmHeal' });
   }
 
   selectSkill(skillId: string): void {
-    this.setState(completeEvent(this.state, skillId));
+    const next = applySelectSkill(this.state, skillId);
+    this.commit(next, { kind: 'selectSkill', skillId });
   }
 
   skipSkillPick(): void {
-    this.setState(completeEvent(this.state, '__skip__'));
+    const payload = this.state.run.activeEvent?.payload as SkillPickPayload | undefined;
+    if (payload?.afterCombatLoot) {
+      const next = applySkipCombatLootSkillPick(this.state);
+      if (next !== this.state) {
+        this.commit(next, { kind: 'skipSkillPick' });
+      }
+      return;
+    }
+    this.commit(completeEvent(this.state, '__skip__'), { kind: 'skipSkillPick' });
+  }
+
+  skipLootSkillReward(): void {
+    const next = applySkipLootSkillReward(this.state);
+    if (next === this.state) return;
+    this.commit(next, { kind: 'skipSkillPick' });
   }
 
   buyShopItem(itemId: string): void {
-    this.setState(purchaseShopItem(this.state, itemId));
+    this.commit(purchaseShopItem(this.state, itemId), { kind: 'buyShop', itemId });
   }
 
   leaveShop(): void {
-    this.setState(completeEvent(this.state, '__leave__'));
-  }
-
-  combatAttack(): void {
-    const run = playerAttack(this.state.run);
-    this.handleCombatEnd(run);
+    this.commit(completeEvent(this.state, '__leave__'), { kind: 'leaveShop' });
   }
 
   combatUseSkill(skillId: string): void {
-    const run = useSkill(this.state.run, skillId);
-    this.handleCombatEnd(run);
+    const next = applyCombatSkill(this.state, skillId);
+    this.handleCombatEnd(next, { kind: 'combatSkill', skillId });
   }
 
-  private handleCombatEnd(run: import('../types/game-state').RunState): void {
-    if (!run.combat?.finished) {
-      this.setState({ ...this.state, run });
-      return;
-    }
+  resolveEnemyTurn(): void {
+    const run = runEnemyTurn(this.state.run);
+    this.handleCombatEnd({ ...this.state, run });
+  }
 
-    const result = run.combat.result;
-    if (result === 'lose') {
-      this.setState(completeEvent({ ...this.state, run }, undefined, 'lose'));
-      return;
-    }
+  clearCombatLastAction(): void {
+    this.commit({ ...this.state, run: clearCombatLastAction(this.state.run) });
+  }
 
-    if (result === 'win') {
-      const active = run.activeEvent;
-      const combatPayload = (active?.eventPayload ?? active?.payload) as CombatPayload;
-      let state: GameState = { ...this.state, run };
-      const { loot, state: afterRoll } = rollCombatLoot(state, combatPayload);
-      state = afterRoll;
+  combatVictoryContinue(): void {
+    this.commit(openCombatLoot(this.state));
+  }
 
-      const combatPayloadStored = active?.eventPayload ?? active?.payload;
-      const runWithLoot = {
-        ...state.run,
-        combat: undefined,
-        activeEvent: active
-          ? {
-              eventId: active.eventId,
-              screen: 'loot' as const,
-              payload: loot,
-              eventPayload: combatPayloadStored,
-            }
-          : undefined,
-      };
-
-      this.setState({ ...state, run: runWithLoot });
-      return;
-    }
-
-    this.setState({ ...this.state, run });
+  combatDefeatContinue(): void {
+    const run = this.state.run;
+    if (!run.combat?.finished || run.combat.result !== 'lose') return;
+    this.commit(completeEvent({ ...this.state, run }, undefined, 'lose'), {
+      kind: 'combatDefeatContinue',
+    });
   }
 
   claimLoot(): void {
-    const { activeEvent } = this.state.run;
-    if (!activeEvent || activeEvent.screen !== 'loot') return;
+    const next = applyClaimLoot(this.state);
+    this.commit(next, { kind: 'claimLoot' });
+  }
 
-    const loot = activeEvent.payload as LootPayload;
-    const combatPayload = activeEvent.eventPayload ?? activeEvent.payload;
+  pickLootSkillReward(skillId: string): void {
+    const next = applyLootSkillReward(this.state, skillId);
+    if (next === this.state) return;
+    this.commit(next, { kind: 'selectSkill', skillId });
+  }
 
-    let state = applyEffects(this.state, lootToEffects(loot.items));
-    state = {
-      ...state,
-      run: {
-        ...state.run,
-        activeEvent: {
-          eventId: activeEvent.eventId,
-          screen: 'combat',
-          payload: combatPayload,
-        },
-      },
-    };
-
-    this.setState(completeEvent(state, undefined, 'win'));
+  private handleCombatEnd(state: GameState, action?: RunActionPayload): void {
+    if (!state.run.combat?.finished) {
+      this.commit(state, action);
+      return;
+    }
+    this.commit(state, action);
   }
 
   clearSynergyToast(): void {
-    this.setState({
+    this.commit({
       ...this.state,
       run: { ...this.state.run, newSynergyToast: undefined },
     });
@@ -192,6 +174,11 @@ export class GameEngine {
       profile,
     };
     this.emit();
+  }
+
+  /** Latest persisted run log for export on game over (if this run was saved). */
+  getLastRunRecord() {
+    return this.state.profile.runLogs?.[0] ?? null;
   }
 }
 

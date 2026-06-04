@@ -8,6 +8,7 @@ export const longsword: WeaponDef = {
   classId: 'warrior',
   statModifiers: { attack: 3, block: 2 },
   tags: ['melee'],
+  starterAttackId: 'sword-slash',
 };
 
 export const warhammer: WeaponDef = {
@@ -18,6 +19,7 @@ export const warhammer: WeaponDef = {
   classId: 'warrior',
   statModifiers: { attack: 8, critChance: -0.02 },
   tags: ['melee', 'heavy'],
+  starterAttackId: 'crushing-blow',
 };
 
 export const arcaneStaff: WeaponDef = {
@@ -28,6 +30,7 @@ export const arcaneStaff: WeaponDef = {
   classId: 'mage',
   statModifiers: { spellPower: 8, attack: -2 },
   tags: ['magic', 'aoe'],
+  starterAttackId: 'staff-fireball',
 };
 
 export const focusWand: WeaponDef = {
@@ -38,6 +41,7 @@ export const focusWand: WeaponDef = {
   classId: 'mage',
   statModifiers: { spellPower: 4, attack: 2, critChance: 0.05 },
   tags: ['magic'],
+  starterAttackId: 'arcane-bolt',
 };
 
 export const twinDaggers: WeaponDef = {
@@ -48,6 +52,7 @@ export const twinDaggers: WeaponDef = {
   classId: 'rogue',
   statModifiers: { attack: 2, critChance: 0.08 },
   tags: ['melee', 'bleed'],
+  starterAttackId: 'twin-slash',
 };
 
 export const handCrossbow: WeaponDef = {
@@ -58,6 +63,7 @@ export const handCrossbow: WeaponDef = {
   classId: 'rogue',
   statModifiers: { attack: 5, critChance: 0.05 },
   tags: ['ranged', 'pierce'],
+  starterAttackId: 'crossbow-poison-dart',
 };
 
 export const allWeapons = [

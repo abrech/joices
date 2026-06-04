@@ -92,7 +92,7 @@ function buildFloorOption(eventId: string, ctx: FloorContext): FloorOption | nul
   if (!event) return null;
   const payload = buildEventPayload(eventId, ctx);
 
-  if (eventId === 'skill-offer') {
+  if (eventId === 'skill-training') {
     const p = payload as { skills: string[] };
     if (p.skills.length === 0) return null;
   }

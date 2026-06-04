@@ -22,7 +22,7 @@ export function FloorChoiceScreen(engine: GameEngine): HTMLElement {
   el.appendChild(subtitle);
 
   const grid = document.createElement('div');
-  grid.className = 'card-grid';
+  grid.className = 'card-grid card-grid--stagger';
 
   run.floorOptions.forEach((option, index) => {
     let preview = option.preview;
@@ -46,15 +46,18 @@ export function FloorChoiceScreen(engine: GameEngine): HTMLElement {
       }
     }
 
-    grid.appendChild(
-      Card({
-        title: option.name,
-        description: option.description,
-        imageKey: option.imageKey,
-        preview,
-        onClick: () => engine.selectFloorOption(index),
-      }),
-    );
+    const card = Card({
+      title: option.name,
+      description: option.description,
+      imageKey: option.imageKey,
+      preview,
+      onClick: () => {
+        grid.classList.add('card-grid--chosen');
+        card.classList.add('card--selected');
+        setTimeout(() => engine.selectFloorOption(index), 180);
+      },
+    });
+    grid.appendChild(card);
   });
 
   el.appendChild(grid);

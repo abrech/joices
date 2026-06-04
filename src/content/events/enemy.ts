@@ -1,14 +1,11 @@
-import type { EventDef, SkillPoolFilter } from '../../types/events';
+import type { EventDef } from '../../types/events';
 import type { CombatPayload } from '../../types/events';
 import { pickEnemy, buildCombatPayloadFromPick } from '../../game/progression/EnemyPicker';
 import { buildEnemyPreview } from '../../game/progression/PacingRules';
 import { isFirstCombatFloor, isBossFloor } from '../../game/progression/PacingRules';
 import { WEIGHT_ENEMY } from '../../game/progression/EncounterWeights';
 
-export const defaultSkillFilter: SkillPoolFilter = (skill, ctx) => {
-  if (!skill.classId) return true;
-  return skill.classId === ctx.run.player.classId;
-};
+export { learnableSkillFilter as defaultSkillFilter } from '../../game/systems/SkillFilters';
 
 export const enemyEvent: EventDef = {
   id: 'enemy',

@@ -1,0 +1,84 @@
+import type { SkillDef } from '../../../types/definitions';
+
+export const poisonDart: SkillDef = {
+  id: 'crossbow-poison-dart',
+  name: 'Poison Dart',
+  description: 'Your default crossbow shot. Always available.',
+  imageKey: 'poison-dart',
+  type: 'attack',
+  tags: ['poison', 'ranged'],
+  weaponId: 'hand-crossbow',
+  maxLevel: 3,
+  baseCooldown: 0,
+  levelDescriptions: [
+    'Deal 80% attack + 2 poison. Always available.',
+    'Deal 100% attack + 3 poison. Always available.',
+    'Deal 120% attack + 4 poison. Always available.',
+  ],
+  onUse: (ctx, level) => {
+    const mult = [0.8, 1.0, 1.2][level - 1];
+    const stacks = [2, 3, 4][level - 1];
+    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    return {
+      damage: dmg,
+      applyStatus: { target: 'enemy', type: 'poison', stacks },
+      logMessage: `Poison Dart hits for ${dmg}!`,
+    };
+  },
+};
+
+export const markedShot: SkillDef = {
+  id: 'marked-shot',
+  name: 'Marked Shot',
+  description: 'Mark the target for increased poison damage.',
+  imageKey: 'poison-dart',
+  type: 'attack',
+  tags: ['poison', 'ranged'],
+  weaponId: 'hand-crossbow',
+  maxLevel: 3,
+  baseCooldown: 3,
+  levelDescriptions: [
+    'Deal 95% attack + 2 poison. Cooldown: 3 turns.',
+    'Deal 110% attack + 3 poison. Cooldown: 2 turns.',
+    'Deal 125% attack + 3 poison. Cooldown: 1 turn.',
+  ],
+  onUse: (ctx, level) => {
+    const mult = [0.95, 1.1, 1.25][level - 1];
+    const stacks = level >= 2 ? 3 : 2;
+    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    return {
+      damage: dmg,
+      applyStatus: { target: 'enemy', type: 'poison', stacks },
+      logMessage: `Marked Shot deals ${dmg}!`,
+    };
+  },
+};
+
+export const volley: SkillDef = {
+  id: 'volley',
+  name: 'Volley',
+  description: 'Loose a volley of poisoned bolts.',
+  imageKey: 'poison-dart',
+  type: 'attack',
+  tags: ['poison', 'ranged', 'aoe'],
+  weaponId: 'hand-crossbow',
+  maxLevel: 3,
+  baseCooldown: 3,
+  levelDescriptions: [
+    'Deal 75% attack + 3 poison. Cooldown: 3 turns.',
+    'Deal 90% attack + 4 poison. Cooldown: 2 turns.',
+    'Deal 105% attack + 5 poison. Cooldown: 1 turn.',
+  ],
+  onUse: (ctx, level) => {
+    const mult = [0.75, 0.9, 1.05][level - 1];
+    const stacks = [3, 4, 5][level - 1];
+    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    return {
+      damage: dmg,
+      applyStatus: { target: 'enemy', type: 'poison', stacks },
+      logMessage: `Volley rains down for ${dmg}!`,
+    };
+  },
+};
+
+export const handCrossbowAttacks = [poisonDart, markedShot, volley];

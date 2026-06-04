@@ -1,11 +1,12 @@
-import type { CombatState, CombatLogEntry } from '../../types/game-state';
+import type { CombatState, CombatLogEntry, CombatLastAction } from '../../types/game-state';
 import type { CombatEffectResult } from '../../types/definitions';
-import { getEnemy, getSkill, getWeapon } from '../../content/registries';
+import { getEnemy, getSkill } from '../../content/registries';
 import { buildCombatContext } from './CombatContext';
 import { applyBleedStatus, applyStatus, statusDamagePerTick, tickStatuses } from './status-effects';
 import { computeSynergyBonuses } from '../systems/SynergySystem';
 import { getHemophiliaBonuses, getSkillCooldown } from '../systems/SkillSystem';
 import type { RunState } from '../../types/game-state';
+import { nextRandom } from '../rng';
 
 export interface StartCombatParams {
   enemyId: string;
@@ -41,20 +42,35 @@ function addLog(combat: CombatState, text: string, type: CombatLogEntry['type'] 
   return { ...combat, log: [...combat.log, { text, type }] };
 }
 
-function tickCooldowns(combat: CombatState): CombatState {
+function withLastAction(combat: CombatState, action: CombatLastAction): CombatState {
+  return { ...combat, lastAction: action };
+}
+
+export function clearCombatLastAction(run: RunState): RunState {
+  if (!run.combat?.lastAction) return run;
+  return { ...run, combat: { ...run.combat, lastAction: undefined } };
+}
+
+function tickCooldowns(combat: CombatState, excludeSkillId?: string): CombatState {
   const skillCooldowns = { ...combat.skillCooldowns };
   for (const id of Object.keys(skillCooldowns)) {
+    if (id === excludeSkillId) continue;
     if (skillCooldowns[id] > 0) skillCooldowns[id]--;
   }
   return { ...combat, skillCooldowns };
 }
 
-function beginPlayerTurn(combat: CombatState): CombatState {
-  return tickCooldowns(combat);
+function endPlayerTurn(combat: CombatState, excludeSkillId?: string): CombatState {
+  return tickCooldowns(combat, excludeSkillId);
 }
 
-function rollCrit(critChance: number): boolean {
-  return Math.random() < critChance;
+function beginPlayerTurn(combat: CombatState): CombatState {
+  return combat;
+}
+
+function consumeRng(run: RunState): { value: number; run: RunState } {
+  const result = nextRandom(run.rngState);
+  return { value: result.value, run: { ...run, rngState: result.state } };
 }
 
 function combatSynergyBonuses(skills: RunState['player']['skills']) {
@@ -66,43 +82,15 @@ function combatSynergyBonuses(skills: RunState['player']['skills']) {
   return bonuses;
 }
 
-export function playerAttack(run: RunState): RunState {
-  if (!run.combat || run.combat.finished || run.combat.turn !== 'player') return run;
-
-  let combat = { ...run.combat };
-  const synergies = combatSynergyBonuses(run.player.skills);
-  const isCrit = rollCrit(run.player.stats.critChance + (synergies.critBonus ?? 0));
-  let dmg = run.player.stats.attack;
-  if (isCrit) dmg = Math.floor(dmg * 1.5);
-
-  const weapon = getWeapon(run.player.weaponId);
-  if (weapon?.tags.includes('bleed')) {
-    const hem = getHemophiliaBonuses(run.player.skills);
-    combat.enemyStatuses = applyBleedStatus(combat.enemyStatuses, 1, 3, hem);
-    if (hem) {
-      combat = addLog(combat, 'Hemophilia intensifies the bleed!', 'system');
-    }
-  }
-
-  combat.enemyHp = Math.max(0, combat.enemyHp - dmg);
-  combat = addLog(combat, `You attack for ${dmg}${isCrit ? ' CRIT!' : ''}!`, isCrit ? 'crit' : 'player');
-
-  if (combat.enemyHp <= 0) {
-    combat.finished = true;
-    combat.result = 'win';
-    combat = addLog(combat, 'Enemy defeated!', 'system');
-    return { ...run, combat };
-  }
-
-  combat.turn = 'enemy';
-  return enemyTurn({ ...run, combat });
-}
-
-function applySkillResult(combat: CombatState, run: RunState, result: CombatEffectResult): CombatState {
+function applySkillResult(
+  combat: CombatState,
+  run: RunState,
+  result: CombatEffectResult,
+): { combat: CombatState; lastAction?: CombatLastAction } {
   let updated = { ...combat };
   const hem = getHemophiliaBonuses(run.player.skills);
 
-  if (result.damage) {
+  if (typeof result.damage === 'number') {
     updated.enemyHp = Math.max(0, updated.enemyHp - result.damage);
   }
   if (result.heal) {
@@ -129,7 +117,16 @@ function applySkillResult(combat: CombatState, run: RunState, result: CombatEffe
     updated = addLog(updated, result.logMessage, 'player');
   }
 
-  return updated;
+  let lastAction: CombatLastAction | undefined;
+  if (typeof result.damage === 'number') {
+    lastAction = { actor: 'player', kind: 'skill', damage: result.damage };
+  } else if (result.dodgeNext) {
+    lastAction = { actor: 'player', kind: 'dodge' };
+  } else if (result.heal || result.applyStatus || result.stun || result.logMessage) {
+    lastAction = { actor: 'player', kind: 'skill' };
+  }
+
+  return { combat: updated, lastAction };
 }
 
 export function useSkill(run: RunState, skillId: string): RunState {
@@ -148,7 +145,11 @@ export function useSkill(run: RunState, skillId: string): RunState {
   const ctx = buildCombatContext(run, synergies);
   const result = skill.onUse(ctx, owned.level);
 
-  let combat = applySkillResult({ ...run.combat }, run, result);
+  const applied = applySkillResult({ ...run.combat }, run, result);
+  let combat = applied.combat;
+  if (applied.lastAction) {
+    combat = withLastAction(combat, applied.lastAction);
+  }
   const cooldownTurns = getSkillCooldown(skillId, owned.level);
   combat.skillCooldowns = { ...combat.skillCooldowns, [skillId]: cooldownTurns };
 
@@ -160,11 +161,17 @@ export function useSkill(run: RunState, skillId: string): RunState {
   }
 
   combat.turn = 'enemy';
-  return enemyTurn({ ...run, combat });
+  combat = endPlayerTurn(combat, skillId);
+  return { ...run, combat };
 }
 
-function processEnemyStatusTicks(combat: CombatState, synergies: ReturnType<typeof computeSynergyBonuses>): CombatState {
+function processEnemyStatusTicks(
+  combat: CombatState,
+  synergies: ReturnType<typeof computeSynergyBonuses>,
+): { combat: CombatState; lastAction?: CombatLastAction } {
   let updated = { ...combat };
+  let totalStatusDamage = 0;
+
   for (const status of updated.enemyStatuses) {
     if (status.type === 'stun') continue;
     let ticks = 1;
@@ -172,13 +179,21 @@ function processEnemyStatusTicks(combat: CombatState, synergies: ReturnType<type
     for (let t = 0; t < ticks; t++) {
       const dmg = statusDamagePerTick(status.type, status.stacks, synergies);
       if (dmg > 0) {
+        totalStatusDamage += dmg;
         updated.enemyHp = Math.max(0, updated.enemyHp - dmg);
         updated = addLog(updated, `${status.type} deals ${dmg} to enemy`, 'system');
       }
     }
   }
   updated.enemyStatuses = tickStatuses(updated.enemyStatuses);
-  return updated;
+
+  if (totalStatusDamage > 0) {
+    return {
+      combat: updated,
+      lastAction: { actor: 'player', kind: 'status', damage: totalStatusDamage },
+    };
+  }
+  return { combat: updated };
 }
 
 export function enemyTurn(run: RunState): RunState {
@@ -189,7 +204,11 @@ export function enemyTurn(run: RunState): RunState {
   if (!enemy) return run;
 
   const synergies = combatSynergyBonuses(run.player.skills);
-  combat = processEnemyStatusTicks(combat, synergies);
+  const statusResult = processEnemyStatusTicks(combat, synergies);
+  combat = statusResult.combat;
+  if (statusResult.lastAction) {
+    combat = withLastAction(combat, statusResult.lastAction);
+  }
 
   if (combat.enemyHp <= 0) {
     combat.finished = true;
@@ -201,6 +220,7 @@ export function enemyTurn(run: RunState): RunState {
   if (combat.enemyStunned) {
     combat.enemyStunned = false;
     combat = addLog(combat, 'Enemy is stunned!', 'system');
+    combat = withLastAction(combat, { actor: 'enemy', kind: 'stun' });
     combat.turn = 'player';
     combat = beginPlayerTurn(combat);
     return { ...run, combat };
@@ -213,8 +233,11 @@ export function enemyTurn(run: RunState): RunState {
     dmg = Math.floor(dmg * 1.5);
     combat = addLog(combat, 'Enemy charges a powerful blow!', 'enemy');
   }
-  if (enemy.behavior === 'defensive' && Math.random() < 0.3) {
+  const blockRoll = consumeRng(run);
+  run = blockRoll.run;
+  if (enemy.behavior === 'defensive' && blockRoll.value < 0.3) {
     combat = addLog(combat, 'Enemy blocks and prepares...', 'enemy');
+    combat = withLastAction(combat, { actor: 'enemy', kind: 'block' });
     combat.turn = 'player';
     combat = beginPlayerTurn(combat);
     return { ...run, combat };
@@ -223,6 +246,7 @@ export function enemyTurn(run: RunState): RunState {
   if (combat.playerDodgeNext) {
     combat.playerDodgeNext = false;
     combat = addLog(combat, 'You dodge the attack!', 'player');
+    combat = withLastAction(combat, { actor: 'enemy', kind: 'dodge' });
     combat.turn = 'player';
     combat = beginPlayerTurn(combat);
     return { ...run, combat };
@@ -231,7 +255,16 @@ export function enemyTurn(run: RunState): RunState {
   const block = run.player.stats.block;
   const actualDmg = Math.max(0, dmg - block);
   run.player.hp = Math.max(0, run.player.hp - actualDmg);
-  combat = addLog(combat, `${enemy.name} attacks for ${actualDmg}${block > 0 ? ` (${block} blocked)` : ''}!`, 'enemy');
+  combat = addLog(
+    combat,
+    `${enemy.name} attacks for ${actualDmg}${block > 0 ? ` (${block} blocked)` : ''}!`,
+    'enemy',
+  );
+  combat = withLastAction(combat, {
+    actor: 'enemy',
+    kind: 'attack',
+    damage: actualDmg,
+  });
 
   if (run.player.hp <= 0) {
     combat.finished = true;
@@ -245,6 +278,10 @@ export function enemyTurn(run: RunState): RunState {
   return { ...run, combat };
 }
 
+export function resolveEnemyTurn(run: RunState): RunState {
+  return enemyTurn(run);
+}
+
 export function applyCombatStartPassives(run: RunState): RunState {
   if (!run.combat) return run;
 
@@ -256,7 +293,8 @@ export function applyCombatStartPassives(run: RunState): RunState {
     const skill = getSkill(owned.id);
     if (skill?.combatStart) {
       const result = skill.combatStart(ctx, owned.level);
-      combat = applySkillResult(combat, run, result);
+      const applied = applySkillResult(combat, run, result);
+      combat = applied.combat;
     }
   }
 

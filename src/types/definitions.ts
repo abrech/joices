@@ -44,6 +44,7 @@ export interface WeaponDef {
   classId: string;
   statModifiers: Partial<Stats>;
   tags: string[];
+  starterAttackId: string;
   unlockRequirement?: string;
 }
 
@@ -52,9 +53,10 @@ export interface SkillDef {
   name: string;
   description: string;
   imageKey: string;
-  type: 'active' | 'passive';
+  type: 'attack' | 'passive';
   tags: string[];
   classId?: string;
+  weaponId?: string;
   maxLevel: number;
   levelDescriptions: string[];
   baseCooldown?: number;

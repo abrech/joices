@@ -1,0 +1,338 @@
+/* Screen transitions */
+.screen-enter {
+  animation: screen-enter 0.22s ease forwards;
+}
+
+.screen-exit {
+  animation: screen-exit 0.2s ease forwards;
+}
+
+@keyframes screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes screen-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(8, 10, 22, 0.78);
+  backdrop-filter: blur(3px);
+}
+
+.modal-panel {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  animation: modal-enter 0.28s ease;
+}
+
+.modal-panel__title {
+  font-size: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.modal-panel__subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 1.25rem;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Combat */
+.combat-screen {
+  position: relative;
+}
+
+.combat-screen--busy .btn-row {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.combat-turn-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: none;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.35);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.95rem;
+  animation: banner-pulse 0.5s ease;
+}
+
+@keyframes banner-pulse {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.combat-fighter {
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.fighter-lunge-right {
+  animation: lunge-right 0.35s ease;
+}
+
+.fighter-lunge-left {
+  animation: lunge-left 0.35s ease;
+}
+
+@keyframes lunge-right {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(14px);
+  }
+}
+
+@keyframes lunge-left {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-14px);
+  }
+}
+
+.fighter-hit {
+  animation: fighter-shake 0.4s ease;
+}
+
+.fighter-crit-hit {
+  animation: fighter-shake-crit 0.45s ease;
+}
+
+@keyframes fighter-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes fighter-shake-crit {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-10px);
+  }
+  30% {
+    transform: translateX(10px);
+  }
+  45% {
+    transform: translateX(-8px);
+  }
+  60% {
+    transform: translateX(8px);
+  }
+  75% {
+    transform: translateX(-4px);
+  }
+}
+
+.hp-bar__fill--damage {
+  animation: hp-flash 0.45s ease;
+}
+
+@keyframes hp-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  30% {
+    filter: brightness(1.8) saturate(1.4);
+  }
+}
+
+.damage-popup {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--danger);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: damage-pop 0.7s ease forwards;
+  z-index: 2;
+}
+
+.damage-popup--crit {
+  font-size: 1.35rem;
+  color: #ff8a9b;
+}
+
+@keyframes damage-pop {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-28px);
+  }
+}
+
+.combat-log__entry--new {
+  animation: log-entry-in 0.3s ease;
+}
+
+@keyframes log-entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.combat-victory-flash .combat-fighter {
+  animation: victory-pulse 0.6s ease;
+}
+
+@keyframes victory-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.card-grid--stagger .card {
+  animation: card-stagger-in 0.35s ease backwards;
+}
+
+.card-grid--stagger .card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.card-grid--stagger .card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.card-grid--stagger .card:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.card-grid--stagger .card:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.card-grid--chosen .card:not(.card--selected) {
+  opacity: 0.45;
+  transform: scale(0.97);
+  transition: opacity 0.18s, transform 0.18s;
+}
+
+.card--selected {
+  transform: scale(0.96) !important;
+  border-color: var(--accent) !important;
+}
+
+.card:active:not(.card--disabled) {
+  transform: scale(0.97);
+}
+
+@keyframes card-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stats-panel--player-hit .hp-bar__fill {
+  animation: hp-flash 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter,
+  .screen-exit,
+  .modal-panel,
+  .fighter-lunge-right,
+  .fighter-lunge-left,
+  .fighter-hit,
+  .fighter-crit-hit,
+  .hp-bar__fill--damage,
+  .damage-popup,
+  .combat-log__entry--new,
+  .combat-turn-banner,
+  .card-grid--stagger .card,
+  .stats-panel--player-hit .hp-bar__fill {
+    animation: none !important;
+    transition: none !important;
+  }
+}

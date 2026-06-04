@@ -1,6 +1,7 @@
 import type { EventDef, ShopPayload } from '../../types/events';
 import { getAllSkills } from '../registries';
 import { scaleShopPrice } from '../../game/progression/Scaling';
+import { SHOP_HEAL_ITEM, SHOP_SKILL_BASE_PRICE, SHOP_STAT_ITEMS } from '../shop/catalog';
 import { defaultSkillFilter } from './enemy';
 import { WEIGHT_SHOP } from '../../game/progression/EncounterWeights';
 import { isBossFloor } from '../../game/progression/PacingRules';
@@ -24,32 +25,24 @@ export const shopEvent: EventDef = {
         id: 'shop-skill',
         type: 'skill' as const,
         name: pick.name,
-        description: 'Learn a new skill',
-        price: scaleShopPrice(25, floor),
+        description: 'Learn a new attack or passive',
+        price: scaleShopPrice(SHOP_SKILL_BASE_PRICE, floor),
         skillId: pick.id,
       };
     }
 
-    const items = [
-      skillItem,
+    const fixedItems = [
       {
-        id: 'shop-heal',
-        type: 'heal' as const,
-        name: 'Healing Potion',
-        description: 'Restore 40% max HP',
-        price: scaleShopPrice(15, floor),
-        healPercent: 0.4,
+        ...SHOP_HEAL_ITEM,
+        price: scaleShopPrice(SHOP_HEAL_ITEM.basePrice, floor),
       },
-      {
-        id: 'shop-attack',
-        type: 'stat' as const,
-        name: 'Sharpening Stone',
-        description: '+2 Attack permanently this run',
-        price: scaleShopPrice(30, floor),
-        stat: 'attack' as const,
-        statDelta: 2,
-      },
-    ].filter(Boolean) as ShopPayload['items'];
+      ...SHOP_STAT_ITEMS.map((item) => ({
+        ...item,
+        price: scaleShopPrice(item.basePrice, floor),
+      })),
+    ];
+
+    const items = [skillItem, ...fixedItems].filter(Boolean) as ShopPayload['items'];
 
     return { items };
   },

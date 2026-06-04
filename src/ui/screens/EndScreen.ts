@@ -1,5 +1,6 @@
 import type { GameEngine } from '../../game/GameEngine';
 import { getSkill } from '../../content/registries';
+import { buildRunRecord } from '../../game/logging/RunLogger';
 
 export function EndScreen(engine: GameEngine): HTMLElement {
   const { run } = engine.getState();
@@ -16,7 +17,7 @@ export function EndScreen(engine: GameEngine): HTMLElement {
     ['Floor reached', String(run.floor)],
     ['Gold earned', String(run.runGoldEarned)],
     ['Class', run.player.classId],
-    ['Skills collected', String(run.player.skills.length)],
+    ['Attacks & passives', String(run.player.skills.length)],
   ];
 
   for (const [label, value] of rows) {
@@ -41,6 +42,24 @@ export function EndScreen(engine: GameEngine): HTMLElement {
   }
 
   el.appendChild(summary);
+
+  const record = buildRunRecord(run) ?? engine.getLastRunRecord();
+  if (record) {
+    const download = document.createElement('button');
+    download.className = 'btn btn--secondary';
+    download.style.marginTop = '0.75rem';
+    download.textContent = 'Download run log';
+    download.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `joices-run-${record.id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    el.appendChild(download);
+  }
 
   const restart = document.createElement('button');
   restart.className = 'btn btn--primary';

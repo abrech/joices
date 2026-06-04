@@ -33,8 +33,13 @@ export function getSkillDescription(skillId: string, level: number): string {
   return skill.levelDescriptions[idx] ?? skill.description;
 }
 
+export function getAttackSkills(run: RunState) {
+  return run.player.skills.filter((s) => getSkill(s.id)?.type === 'attack');
+}
+
+/** @deprecated Use getAttackSkills */
 export function getActiveSkills(run: RunState) {
-  return run.player.skills.filter((s) => getSkill(s.id)?.type === 'active');
+  return getAttackSkills(run);
 }
 
 export function getPassiveSkills(run: RunState) {
@@ -45,6 +50,7 @@ export function getPassiveSkills(run: RunState) {
 export function getSkillCooldown(skillId: string, level: number): number {
   const skill = getSkill(skillId);
   const base = skill?.baseCooldown ?? 3;
+  if (base === 0) return 0;
   return Math.max(1, base - (level - 1));
 }
 
@@ -72,7 +78,7 @@ export function initSkillCooldowns(run: RunState): Record<string, number> {
   const cooldowns: Record<string, number> = {};
   for (const s of run.player.skills) {
     const def = getSkill(s.id);
-    if (def?.type === 'active') cooldowns[s.id] = 0;
+    if (def?.type === 'attack') cooldowns[s.id] = 0;
   }
   return cooldowns;
 }
