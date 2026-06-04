@@ -11,13 +11,13 @@ export const twinSlash: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 90% attack + 1 bleed. Always available.',
-    'Deal 105% attack + 2 bleed. Always available.',
-    'Deal 120% attack + 2 bleed. Always available.',
+    'Deal 100% attack + 2 bleed. Always available.',
+    'Deal 110% attack + 2 bleed. Always available.',
+    'Deal 125% attack + 2 bleed. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.9, 1.05, 1.2][level - 1];
-    const stacks = level >= 2 ? 2 : 1;
+    const mult = [1.0, 1.1, 1.25][level - 1];
+    const stacks = 2;
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,

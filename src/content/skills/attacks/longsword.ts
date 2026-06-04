@@ -11,12 +11,12 @@ export const swordSlash: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 100% attack damage. Always available.',
-    'Deal 115% attack damage. Always available.',
-    'Deal 130% attack damage. Always available.',
+    'Deal 90% attack damage. Always available.',
+    'Deal 105% attack damage. Always available.',
+    'Deal 120% attack damage. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.15, 1.3][level - 1];
+    const mult = [0.9, 1.05, 1.2][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
     return { damage: dmg, logMessage: `Sword Slash hits for ${dmg}!` };
   },

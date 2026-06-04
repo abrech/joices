@@ -12,6 +12,12 @@ export function attackMultiplier(floor: number): number {
   return 1 + floor * rate;
 }
 
+/** Softer HP ramp for boss fights only (10% per floor after floor 3). */
+export function bossHpMultiplier(floor: number): number {
+  const rate = floor <= 3 ? 0.06 : 0.10;
+  return 1 + floor * rate;
+}
+
 export function scaleEnemyHp(baseHp: number, floor: number, tier: EnemyTier = 'normal'): number {
   let hp = Math.floor(baseHp * hpMultiplier(floor));
   if (tier === 'elite') hp = Math.floor(hp * ELITE_STAT_MULTIPLIER);
@@ -68,18 +74,21 @@ export function scaledEnemyStats(
   };
 }
 
-/** Boss fights use floor scaling without elite tier bonus. */
+/** Boss fights use softer HP scaling; attack uses normal floor ramp. */
 export function scaledBossStats(
   baseHp: number,
   baseAttack: number,
   floor: number,
 ): { hp: number; attack: number } {
-  return scaledEnemyStats(baseHp, baseAttack, floor, 'normal');
+  return {
+    hp: Math.floor(baseHp * bossHpMultiplier(floor)),
+    attack: scaleEnemyAttack(baseAttack, floor, 'normal'),
+  };
 }
 
 /** Elite chance when elites are allowed (floors 3+). */
 export function eliteChanceForFloor(floor: number): number {
   if (floor <= 2) return 0;
   if (floor <= 5) return 0.15;
-  return 0.4;
+  return 0.32;
 }

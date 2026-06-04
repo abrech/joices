@@ -11,12 +11,12 @@ export const fireball: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal spell power damage + 1 burn. Always available.',
-    'Deal 125% spell power + 2 burn. Always available.',
-    'Deal 150% spell power + 2 burn. Always available.',
+    'Deal 85% spell power + 1 burn. Always available.',
+    'Deal 110% spell power + 2 burn. Always available.',
+    'Deal 135% spell power + 2 burn. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1, 1.25, 1.5][level - 1];
+    const mult = [0.85, 1.1, 1.35][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return {
       damage: dmg,

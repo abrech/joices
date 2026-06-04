@@ -11,12 +11,12 @@ export const poisonDart: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 80% attack + 2 poison. Always available.',
-    'Deal 100% attack + 3 poison. Always available.',
-    'Deal 120% attack + 4 poison. Always available.',
+    'Deal 72% attack + 2 poison. Always available.',
+    'Deal 90% attack + 3 poison. Always available.',
+    'Deal 108% attack + 4 poison. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.8, 1.0, 1.2][level - 1];
+    const mult = [0.72, 0.9, 1.08][level - 1];
     const stacks = [2, 3, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {

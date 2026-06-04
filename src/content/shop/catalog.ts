@@ -69,4 +69,4 @@ export const SHOP_STAT_ITEMS: ShopCatalogEntry[] = [
   },
 ];
 
-export const SHOP_SKILL_BASE_PRICE = 25;
+export const SHOP_SKILL_BASE_PRICE = 20;

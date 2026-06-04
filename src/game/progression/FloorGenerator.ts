@@ -10,6 +10,7 @@ import {
   buildForcedEnemyOption,
 } from './PacingRules';
 import { pickEnemy, buildCombatPayloadFromPick } from './EnemyPicker';
+import { hasTrainingAvailable } from '../../content/events/skill';
 import type { CombatPayload } from '../../types/events';
 
 function getEventWeight(event: import('../../types/events').EventDef, ctx: FloorContext): number {
@@ -45,6 +46,10 @@ function pickWeightedEventForSlot(
 
 export function getOptionCount(floor: number, rng: () => number): number {
   if (floor <= 3) return 1;
+  if (isBossFloor(floor + 1)) {
+    const base = rng() < 0.7 ? 1 : 2;
+    return Math.max(2, base);
+  }
   if (floor <= 9) return rng() < 0.7 ? 1 : 2;
   const r = rng();
   if (r < 0.4) return 1;
@@ -159,5 +164,40 @@ export function generateFloorOptions(run: RunState): FloorOption[] {
     return pickFallbackOptions(ctx);
   }
 
-  return applyPacingConstraints(options, ctx);
+  return applyPacingConstraints(injectPreBossTrainingIfNeeded(options, ctx), ctx);
+}
+
+function injectPreBossTrainingIfNeeded(
+  options: FloorOption[],
+  ctx: FloorContext,
+): FloorOption[] {
+  if (!isBossFloor(ctx.floor + 1)) return options;
+  if (options.some((o) => o.eventId === 'skill-training')) return options;
+  if (!hasTrainingAvailable(ctx)) return options;
+
+  const trainingOption = buildFloorOption('skill-training', ctx);
+  if (!trainingOption) return options;
+
+  const replaceCandidates = options
+    .map((o, index) => ({
+      index,
+      weight: getEventWeight(getEvent(o.eventId)!, ctx),
+      eventId: o.eventId,
+    }))
+    .filter((c) => c.eventId !== 'enemy');
+
+  if (replaceCandidates.length > 0) {
+    const lowest = replaceCandidates.reduce((a, b) => (a.weight <= b.weight ? a : b));
+    const result = [...options];
+    result[lowest.index] = trainingOption;
+    return result;
+  }
+
+  if (options.length > 1) {
+    const result = [...options];
+    result[result.length - 1] = trainingOption;
+    return result;
+  }
+
+  return options;
 }

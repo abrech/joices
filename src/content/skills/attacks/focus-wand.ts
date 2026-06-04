@@ -11,12 +11,12 @@ export const arcaneBolt: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 110% spell power damage. Always available.',
-    'Deal 130% spell power damage. Always available.',
-    'Deal 150% spell power damage. Always available.',
+    'Deal 95% spell power damage. Always available.',
+    'Deal 115% spell power damage. Always available.',
+    'Deal 135% spell power damage. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.1, 1.3, 1.5][level - 1];
+    const mult = [0.95, 1.15, 1.35][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return { damage: dmg, logMessage: `Arcane Bolt strikes for ${dmg}!` };
   },

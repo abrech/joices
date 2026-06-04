@@ -11,12 +11,12 @@ export const crushingBlow: SkillDef = {
   maxLevel: 3,
   baseCooldown: 0,
   levelDescriptions: [
-    'Deal 140% attack damage. Always available.',
-    'Deal 165% attack damage. Always available.',
-    'Deal 190% attack damage. Always available.',
+    'Deal 115% attack damage. Always available.',
+    'Deal 135% attack damage. Always available.',
+    'Deal 155% attack damage. Always available.',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.4, 1.65, 1.9][level - 1];
+    const mult = [1.15, 1.35, 1.55][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
     return { damage: dmg, logMessage: `Crushing Blow smashes for ${dmg}!` };
   },

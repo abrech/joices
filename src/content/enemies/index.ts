@@ -94,7 +94,7 @@ export const lich: EnemyDef = {
   imageKey: 'lich',
   tags: ['undead', 'boss'],
   tier: 'elite',
-  baseStats: { maxHp: 150, attack: 16 },
+  baseStats: { maxHp: 125, attack: 14 },
   behavior: 'bursty',
   goldDrop: [50, 80],
 };

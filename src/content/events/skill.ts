@@ -2,7 +2,7 @@ import type { EventDef, SkillPickPayload } from '../../types/events';
 import { getAllSkills, getSkill } from '../registries';
 import { WEIGHT_SKILL } from '../../game/progression/EncounterWeights';
 import { isBossFloor } from '../../game/progression/PacingRules';
-import { pickSkills } from '../../game/systems/SkillPool';
+import { countWeaponAttacks, pickSkills, pickWeaponAttacks } from '../../game/systems/SkillPool';
 import {
   filterTrainingChoices,
   isUpgradeable,
@@ -28,9 +28,16 @@ function shuffleIds(ids: string[], rng: () => number): string[] {
 }
 
 function buildTrainingChoices(ctx: import('../../types/events').FloorContext): string[] {
+  const choices: string[] = [];
+  if (ctx.floor >= 4 && countWeaponAttacks(ctx) < 2) {
+    choices.push(...pickWeaponAttacks(ctx, 1));
+  }
+
   const newSkills = pickSkills(ctx, 2, learnableSkillFilter);
   const upgrades = shuffleIds(getUpgradeableSkillIds(ctx), ctx.rng);
-  const choices: string[] = [...newSkills];
+  for (const id of newSkills) {
+    if (!choices.includes(id)) choices.push(id);
+  }
 
   for (const id of upgrades) {
     if (choices.length >= 3) break;
@@ -54,9 +61,12 @@ function buildTrainingChoices(ctx: import('../../types/events').FloorContext): s
   return filterTrainingChoices(ctx, choices.slice(0, 3));
 }
 
-function hasLearnableSkill(ctx: import('../../types/events').FloorContext): boolean {
+export function hasTrainingAvailable(ctx: import('../../types/events').FloorContext): boolean {
   const owned = new Set(ctx.run.player.skills.map((s) => s.id));
-  return getAllSkills().some((s) => !owned.has(s.id) && learnableSkillFilter(s, ctx));
+  return (
+    getAllSkills().some((s) => !owned.has(s.id) && learnableSkillFilter(s, ctx)) ||
+    getUpgradeableSkillIds(ctx).length > 0
+  );
 }
 
 export const skillTrainingEvent: EventDef = {
@@ -68,7 +78,7 @@ export const skillTrainingEvent: EventDef = {
   weight: WEIGHT_SKILL,
   canAppear: (ctx) => {
     if (ctx.floor < 2 || isBossFloor(ctx.floor)) return false;
-    return hasLearnableSkill(ctx) || getUpgradeableSkillIds(ctx).length > 0;
+    return hasTrainingAvailable(ctx);
   },
   buildPayload: (ctx) => {
     const skills = buildTrainingChoices(ctx);
