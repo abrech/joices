@@ -1,4 +1,4 @@
-import type { SkillDef } from '../../../types/definitions';
+import type { SkillDef, StatModifier } from '../../../types/definitions';
 
 export const thickSkin: SkillDef = {
   id: 'thick-skin',
@@ -9,8 +9,8 @@ export const thickSkin: SkillDef = {
   tags: [],
   classId: 'warrior',
   maxLevel: 3,
-  levelDescriptions: ['+15 max HP.', '+25 max HP.', '+40 max HP.'],
-  onPassive: (_ctx, level) => [{ stat: 'maxHp', flat: [15, 25, 40][level - 1] }],
+  levelDescriptions: ['+12 max HP.', '+20 max HP.', '+32 max HP.'],
+  onPassive: (_ctx, level) => [{ stat: 'maxHp', flat: [12, 20, 32][level - 1] }],
 };
 
 export const ironWard: SkillDef = {
@@ -35,14 +35,18 @@ export const stalwart: SkillDef = {
   tags: [],
   classId: 'warrior',
   maxLevel: 3,
-  levelDescriptions: ['+10 max HP, +1 block.', '+18 max HP, +2 block.', '+28 max HP, +3 block.'],
+  levelDescriptions: [
+    '+8 max HP, +1 block.',
+    '+14 max HP, +2 block.',
+    '+22 max HP, +3 block, +1 mana regen.',
+  ],
   onPassive: (_ctx, level) => {
-    const hp = [10, 18, 28][level - 1];
-    const block = [1, 2, 3][level - 1];
-    return [
-      { stat: 'maxHp', flat: hp },
-      { stat: 'block', flat: block },
+    const mods: StatModifier[] = [
+      { stat: 'maxHp', flat: [8, 14, 22][level - 1] },
+      { stat: 'block', flat: [1, 2, 3][level - 1] },
     ];
+    if (level >= 3) mods.push({ stat: 'manaRegen', flat: 1 });
+    return mods;
   },
 };
 

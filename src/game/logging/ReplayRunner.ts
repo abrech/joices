@@ -6,6 +6,7 @@ import type { LootPayload } from '../../types/events';
 import {
   applyClaimLoot,
   applyCombatSkill,
+  applyCombatEndTurn,
   applyLootSkillReward,
   applyPickFloor,
   applySelectClass,
@@ -44,7 +45,9 @@ export function replayRun(record: RunRecord, profile?: ProfileState): GameState 
     state = applyReplayAction(state, action);
 
     if (
-      (action.kind === 'combatAttack' || action.kind === 'combatSkill') &&
+      (action.kind === 'combatAttack' ||
+        action.kind === 'combatSkill' ||
+        action.kind === 'combatEndTurn') &&
       state.run.combat?.finished &&
       state.run.combat.result === 'win' &&
       next &&
@@ -82,10 +85,14 @@ function applyReplayAction(state: GameState, action: RunAction): GameState {
     case 'combatAttack': {
       const basicId = getWeapon(state.run.player.weaponId)?.starterAttackId;
       if (!basicId) return state;
-      return drainCombatEnemyPhase(applyCombatSkill(state, basicId));
+      return drainCombatEnemyPhase(
+        applyCombatEndTurn(applyCombatSkill(state, basicId)),
+      );
     }
     case 'combatSkill':
-      return drainCombatEnemyPhase(applyCombatSkill(state, action.skillId));
+      return applyCombatSkill(state, action.skillId);
+    case 'combatEndTurn':
+      return drainCombatEnemyPhase(applyCombatEndTurn(state));
     case 'claimLoot':
       return applyClaimLoot(state);
     case 'selectSkill': {

@@ -21,6 +21,9 @@ export function createPlayer(
   if (weaponDef.starterAttackId) {
     skills.push({ id: weaponDef.starterAttackId, level: 1 });
   }
+  if (weaponDef.starterBlockId) {
+    skills.push({ id: weaponDef.starterBlockId, level: 1 });
+  }
 
   const base: PlayerState = {
     classId,
@@ -28,7 +31,15 @@ export function createPlayer(
     hp: 0,
     gold: 20,
     skills,
-    stats: { maxHp: 0, attack: 0, critChance: 0, block: 0, spellPower: 0 },
+    stats: {
+      maxHp: 0,
+      attack: 0,
+      critChance: 0,
+      block: 0,
+      spellPower: 0,
+      maxMana: 0,
+      manaRegen: 0,
+    },
     activeSynergyIds: [],
   };
 

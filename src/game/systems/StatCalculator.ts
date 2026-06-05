@@ -9,6 +9,8 @@ const BASE_STATS: Stats = {
   critChance: 0,
   block: 0,
   spellPower: 0,
+  maxMana: 0,
+  manaRegen: 0,
 };
 
 function applyModifiers(stats: Stats, mods: StatModifier[]): Stats {
@@ -65,6 +67,8 @@ export function calculateStats(
   stats.critChance = Math.min(0.75, Math.max(0, stats.critChance));
   stats.maxHp = Math.max(1, stats.maxHp);
   stats.attack = Math.max(0, stats.attack);
+  stats.maxMana = Math.max(1, stats.maxMana);
+  stats.manaRegen = Math.max(0, stats.manaRegen);
 
   return { stats, synergyBonuses, activeSynergyIds };
 }

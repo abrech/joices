@@ -3,27 +3,46 @@ import type { SkillDef } from '../../../types/definitions';
 export const swordSlash: SkillDef = {
   id: 'sword-slash',
   name: 'Sword Slash',
-  description: 'Your default longsword strike. Always available.',
+  description: 'Quick blade strike. Low-cost filler.',
   imageKey: 'power-strike',
   type: 'attack',
   tags: ['melee'],
   weaponId: 'longsword',
   maxLevel: 3,
   baseCooldown: 0,
+  manaCost: 2,
   levelDescriptions: [
-    'Deal 90% attack damage. Always available.',
-    'Deal 105% attack damage. Always available.',
-    'Deal 120% attack + 2 block. Always available.',
+    'Deal 60% attack (2 mana).',
+    'Deal 72% attack (2 mana).',
+    'Deal 85% attack (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.9, 1.05, 1.2][level - 1];
+    const mult = [0.6, 0.72, 0.85][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
-    return {
-      damage: dmg,
-      grantBlock: level >= 3 ? 2 : 0,
-      logMessage: `Sword Slash hits for ${dmg}!${level >= 3 ? ' (+2 block)' : ''}`,
-    };
+    return { damage: dmg, logMessage: `Sword Slash hits for ${dmg}!` };
   },
+};
+
+export const shieldGuard: SkillDef = {
+  id: 'shield-guard',
+  name: 'Shield Guard',
+  description: 'Raise your guard for bonus block this enemy phase.',
+  imageKey: 'shield-bash',
+  type: 'attack',
+  tags: ['melee', 'defense'],
+  weaponId: 'longsword',
+  maxLevel: 3,
+  baseCooldown: 0,
+  manaCost: 2,
+  levelDescriptions: [
+    'Grant +4 block (2 mana).',
+    'Grant +6 block (2 mana).',
+    'Grant +8 block (2 mana).',
+  ],
+  onUse: (_ctx, level) => ({
+    grantBlock: [4, 6, 8][level - 1],
+    logMessage: `Shield Guard adds +${[4, 6, 8][level - 1]} block!`,
+  }),
 };
 
 export const longswordShieldBash: SkillDef = {
@@ -35,20 +54,21 @@ export const longswordShieldBash: SkillDef = {
   tags: ['melee', 'stun'],
   weaponId: 'longsword',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 5,
   levelDescriptions: [
-    'Deal 80% attack and stun. Cooldown: 3 turns.',
-    'Deal 100% attack and stun. Cooldown: 2 turns.',
-    'Deal 100% attack, stun, +4 block. Cooldown: 1 turn.',
+    'Deal 100% attack and stun (5 mana). CD 2.',
+    'Deal 120% attack and stun (5 mana). CD 1.',
+    'Deal 135% attack, stun, +4 block (5 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = level >= 2 ? 1.0 : 0.8;
+    const mult = [1.0, 1.2, 1.35][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
       damage: dmg,
       stun: true,
       grantBlock: level >= 3 ? 4 : 0,
-      logMessage: `Shield Bash deals ${dmg} and stuns the enemy!${level >= 3 ? ' (+4 block)' : ''}`,
+      logMessage: `Shield Bash deals ${dmg} and stuns!${level >= 3 ? ' (+4 block)' : ''}`,
     };
   },
 };
@@ -62,17 +82,18 @@ export const riposte: SkillDef = {
   tags: ['melee'],
   weaponId: 'longsword',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 4,
   levelDescriptions: [
-    'Dodge next attack, counter 50% attack. Cooldown: 3 turns.',
-    'Dodge and counter 75% attack. Cooldown: 2 turns.',
-    'Dodge and counter 100% attack. Cooldown: 1 turn.',
+    'Dodge next attack, counter 60% attack (4 mana). CD 2.',
+    'Dodge and counter 85% attack (4 mana). CD 1.',
+    'Dodge and counter 105% attack (4 mana).',
   ],
   onUse: (ctx, level) => ({
     dodgeNext: true,
-    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.45, 0.65, 0.85][level - 1]),
+    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.6, 0.85, 1.05][level - 1]),
     logMessage: 'You brace for a Riposte!',
   }),
 };
 
-export const longswordAttacks = [swordSlash, longswordShieldBash, riposte];
+export const longswordAttacks = [swordSlash, shieldGuard, longswordShieldBash, riposte];

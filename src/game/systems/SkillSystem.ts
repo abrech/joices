@@ -1,4 +1,4 @@
-import type { GameState, RunState } from '../../types/game-state';
+import type { CombatState, GameState, RunState } from '../../types/game-state';
 import { getSkill } from '../../content/registries';
 import { recalculatePlayerStats } from './StatCalculator';
 import { detectNewSynergy } from './SynergySystem';
@@ -86,6 +86,16 @@ export function getToxicBloodBonuses(
   if (!owned) return null;
   const mult = [1.35, 1.52, 1.7][owned.level - 1];
   return { poisonDamageMultiplier: mult };
+}
+
+export function getSkillManaCost(skillId: string): number {
+  const skill = getSkill(skillId);
+  if (skill?.type !== 'attack') return 0;
+  return skill.manaCost ?? 2;
+}
+
+export function canAffordSkill(combat: CombatState, skillId: string): boolean {
+  return combat.currentMana >= getSkillManaCost(skillId);
 }
 
 export function initSkillCooldowns(run: RunState): Record<string, number> {

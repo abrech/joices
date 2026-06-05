@@ -6,6 +6,8 @@ export interface Stats {
   critChance: number;
   block: number;
   spellPower: number;
+  maxMana: number;
+  manaRegen: number;
 }
 
 export interface StatModifier {
@@ -50,6 +52,8 @@ export interface WeaponDef {
   statModifiers: Partial<Stats>;
   tags: string[];
   starterAttackId: string;
+  /** Warrior defensive skill granted at run start (when present). */
+  starterBlockId?: string;
   unlockRequirement?: string;
 }
 
@@ -65,6 +69,8 @@ export interface SkillDef {
   maxLevel: number;
   levelDescriptions: string[];
   baseCooldown?: number;
+  /** Mana spent when used in combat (attacks only). */
+  manaCost?: number;
   onUse?: (ctx: CombatContext, level: number) => CombatEffectResult;
   onPassive?: (ctx: PassiveContext, level: number) => StatModifier[];
   combatStart?: (ctx: CombatContext, level: number) => CombatEffectResult;

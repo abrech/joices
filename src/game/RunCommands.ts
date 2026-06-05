@@ -3,7 +3,12 @@ import type { CombatPayload, LootPayload, SkillPickPayload } from '../types/even
 import { createPlayer } from './createPlayer';
 import { generateFloorOptions } from './progression/FloorGenerator';
 import { beginEvent, completeEvent } from './events/EventResolver';
-import { useSkill, applyCombatStartPassives, enemyTurn } from './combat/CombatEngine';
+import {
+  useSkill,
+  applyCombatStartPassives,
+  enemyTurn,
+  finishPlayerTurn,
+} from './combat/CombatEngine';
 import { rollCombatLoot, lootToEffects } from './loot/LootRoller';
 import { applyEffects } from './effects/EffectApplier';
 import { initRunLogOnWeaponSelect } from './logging/RunLogger';
@@ -48,10 +53,28 @@ export function applyPickFloor(state: GameState, index: number): GameState {
   return next;
 }
 
+const MAX_ENEMY_DRAIN_STEPS = 48;
+
 export function drainCombatEnemyPhase(state: GameState): GameState {
   let { run } = state;
+  let steps = 0;
+
   while (run.combat && !run.combat.finished && run.combat.turn === 'enemy') {
+    if (++steps > MAX_ENEMY_DRAIN_STEPS) break;
+
+    const prevIdx = run.combat.enemyPhaseIndex;
+    const prevTurn = run.combat.turn;
     run = enemyTurn(run);
+
+    if (
+      run.combat &&
+      !run.combat.finished &&
+      run.combat.turn === prevTurn &&
+      run.combat.enemyPhaseIndex === prevIdx &&
+      steps > 1
+    ) {
+      break;
+    }
   }
   return { ...state, run };
 }
@@ -82,7 +105,15 @@ export function openCombatLoot(state: GameState): GameState {
 }
 
 export function applyCombatSkill(state: GameState, skillId: string): GameState {
-  return { ...state, run: useSkill(state.run, skillId) };
+  const run = useSkill(state.run, skillId);
+  if (run === state.run) return state;
+  return { ...state, run };
+}
+
+export function applyCombatEndTurn(state: GameState): GameState {
+  const run = finishPlayerTurn(state.run);
+  if (run === state.run) return state;
+  return { ...state, run };
 }
 
 function finishLootWithoutSkill(state: GameState): GameState {

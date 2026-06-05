@@ -27,13 +27,17 @@ export interface AutoplayRunMetrics {
 
 export function fingerprint(state: GameState): string {
   const { run } = state;
+  const combat = run.combat;
   return JSON.stringify({
     phase: run.phase,
     floor: run.floor,
     hp: run.player.hp,
     gold: run.player.gold,
-    combatTurn: run.combat?.turn,
-    combatFinished: run.combat?.finished,
+    combatTurn: combat?.turn,
+    combatFinished: combat?.finished,
+    combatResult: combat?.result,
+    currentMana: combat?.currentMana,
+    enemyHp: combat?.enemies.reduce((sum, e) => sum + e.hp, 0),
     screen: run.activeEvent?.screen,
     optionCount: run.floorOptions.length,
     shopItems: (run.activeEvent?.payload as { items?: unknown[] } | undefined)?.items?.length,

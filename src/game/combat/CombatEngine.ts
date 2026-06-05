@@ -4,7 +4,11 @@ import { getEnemy, getSkill } from '../../content/registries';
 import { buildCombatContext } from './CombatContext';
 import { applyBleedStatus, applyStatus, statusDamagePerTick, tickStatuses } from './status-effects';
 import { computeSynergyBonuses } from '../systems/SynergySystem';
-import { getHemophiliaBonuses, getSkillCooldown } from '../systems/SkillSystem';
+import {
+  getHemophiliaBonuses,
+  getSkillCooldown,
+  getSkillManaCost,
+} from '../systems/SkillSystem';
 import type { RunState } from '../../types/game-state';
 import { nextRandom } from '../rng';
 import { rollCritDamage } from './combat-damage';
@@ -30,6 +34,7 @@ export interface StartCombatEnemyParams {
 export interface StartCombatParams {
   enemies: StartCombatEnemyParams[];
   skillCooldowns: Record<string, number>;
+  initialMana: number;
   isBoss: boolean;
   goldReward: number;
 }
@@ -55,6 +60,7 @@ export function startCombat(params: StartCombatParams): CombatState {
     enemyPhaseIndex: 0,
     log: [{ text: 'Combat begins!', type: 'system' }],
     skillCooldowns: { ...params.skillCooldowns },
+    currentMana: params.initialMana,
     playerDodgeNext: false,
     playerCounterDamage: 0,
     playerBonusBlock: 0,
@@ -98,8 +104,24 @@ function endPlayerTurn(combat: CombatState, excludeSkillId?: string): CombatStat
   return { ...tickCooldowns(combat, excludeSkillId), enemyPhaseIndex: 0 };
 }
 
-function beginPlayerTurn(combat: CombatState): CombatState {
-  return { ...combat, enemyPhaseIndex: 0, targetIndex: pickLowestHpTargetIndex(combat) };
+function regenMana(combat: CombatState, maxMana: number, manaRegen: number): CombatState {
+  return {
+    ...combat,
+    currentMana: Math.min(maxMana, combat.currentMana + manaRegen),
+  };
+}
+
+function beginPlayerTurn(
+  combat: CombatState,
+  maxMana: number,
+  manaRegen: number,
+): CombatState {
+  const withMana = regenMana(combat, maxMana, manaRegen);
+  return {
+    ...withMana,
+    enemyPhaseIndex: 0,
+    targetIndex: pickLowestHpTargetIndex(withMana),
+  };
 }
 
 function consumeRng(run: RunState): { value: number; run: RunState } {
@@ -400,15 +422,17 @@ export function enemyTurn(run: RunState): RunState {
   }
 
   const living = livingEnemies(combat);
+  const { maxMana, manaRegen } = run.player.stats;
+
   if (living.length === 0) {
     combat.turn = 'player';
-    return { ...run, combat: beginPlayerTurn(combat) };
+    return { ...run, combat: beginPlayerTurn(combat, maxMana, manaRegen) };
   }
 
   const phaseIdx = combat.enemyPhaseIndex;
   if (phaseIdx >= living.length) {
     combat.turn = 'player';
-    return { ...run, combat: beginPlayerTurn(combat) };
+    return { ...run, combat: beginPlayerTurn(combat, maxMana, manaRegen) };
   }
 
   const attacker = living[phaseIdx];
@@ -427,7 +451,7 @@ export function enemyTurn(run: RunState): RunState {
       return { ...run, combat };
     }
     combat.turn = 'player';
-    return { ...run, combat: beginPlayerTurn(combat) };
+    return { ...run, combat: beginPlayerTurn(combat, maxMana, manaRegen) };
   }
 
   combat = mapEnemyUpdate(combat, attacker.instanceId, (e) => ({
@@ -459,7 +483,7 @@ export function enemyTurn(run: RunState): RunState {
       return { ...run, combat };
     }
     combat.turn = 'player';
-    return { ...run, combat: beginPlayerTurn(combat) };
+    return { ...run, combat: beginPlayerTurn(combat, maxMana, manaRegen) };
   }
 
   combat.enemyPhaseIndex = phaseIdx + 1;
@@ -468,7 +492,16 @@ export function enemyTurn(run: RunState): RunState {
   }
 
   combat.turn = 'player';
-  combat = beginPlayerTurn(combat);
+  combat = beginPlayerTurn(combat, maxMana, manaRegen);
+  return { ...run, combat };
+}
+
+/** End the player phase and start the enemy phase. */
+export function finishPlayerTurn(run: RunState): RunState {
+  if (!run.combat || run.combat.finished || run.combat.turn !== 'player') return run;
+
+  let combat = endPlayerTurn(run.combat);
+  combat.turn = 'enemy';
   return { ...run, combat };
 }
 
@@ -483,6 +516,9 @@ export function useSkill(run: RunState, skillId: string): RunState {
 
   const owned = run.player.skills.find((s) => s.id === skillId);
   if (!owned) return run;
+
+  const manaCost = getSkillManaCost(skillId);
+  if (run.combat.currentMana < manaCost) return run;
 
   const synergies = combatSynergyBonuses(run.player.skills);
   const ctx = buildCombatContext(run, synergies);
@@ -506,6 +542,7 @@ export function useSkill(run: RunState, skillId: string): RunState {
 
   const cooldownTurns = getSkillCooldown(skillId, owned.level);
   combat.skillCooldowns = { ...combat.skillCooldowns, [skillId]: cooldownTurns };
+  combat.currentMana -= manaCost;
 
   if (allEnemiesDefeated(combat)) {
     combat.finished = true;
@@ -514,8 +551,6 @@ export function useSkill(run: RunState, skillId: string): RunState {
     return { ...run, combat };
   }
 
-  combat.turn = 'enemy';
-  combat = endPlayerTurn(combat, skillId);
   return { ...run, combat };
 }
 

@@ -87,7 +87,16 @@ function formatStatMods(mods: Partial<Stats>): string {
   const parts: string[] = [];
   for (const [key, val] of Object.entries(mods)) {
     if (val === undefined || val === 0) continue;
-    const label = key === 'maxHp' ? 'Max HP' : key === 'critChance' ? 'Crit' : key;
+    const label =
+      key === 'maxHp'
+        ? 'Max HP'
+        : key === 'critChance'
+          ? 'Crit'
+          : key === 'maxMana'
+            ? 'Max Mana'
+            : key === 'manaRegen'
+              ? 'Mana Regen'
+              : key;
     const suffix = key === 'critChance' ? '%' : '';
     const sign = val > 0 ? '+' : '';
     parts.push(`${sign}${val}${suffix} ${label}`);
@@ -197,7 +206,7 @@ export function GlossaryScreen(): HTMLElement {
   const classesSec = glossarySection('classes', 'Classes', 'Starting archetypes with base stats and two weapon options.');
   const classesGrid = glossaryGrid();
   for (const cls of getAllClasses()) {
-    const stats = `HP ${cls.baseStats.maxHp} · ATK ${cls.baseStats.attack} · BLK ${cls.baseStats.block} · CRIT ${Math.round(cls.baseStats.critChance * 100)}% · SP ${cls.baseStats.spellPower}`;
+    const stats = `HP ${cls.baseStats.maxHp} · ATK ${cls.baseStats.attack} · BLK ${cls.baseStats.block} · CRIT ${Math.round(cls.baseStats.critChance * 100)}% · SP ${cls.baseStats.spellPower} · Mana ${cls.baseStats.maxMana} (+${cls.baseStats.manaRegen}/turn)`;
     classesGrid.appendChild(
       GlossaryEntry({
         title: cls.name,
@@ -212,7 +221,11 @@ export function GlossaryScreen(): HTMLElement {
   root.appendChild(classesSec);
 
   // Weapons
-  const weaponsSec = glossarySection('weapons', 'Weapons', 'Chosen at run start; grants stat modifiers and a 0-cooldown basic attack.');
+  const weaponsSec = glossarySection(
+    'weapons',
+    'Weapons',
+    'Chosen at run start; grants stat modifiers, a 2-mana filler attack, and warriors get a block skill.',
+  );
   const weaponsGrid = glossaryGrid();
   for (const weapon of getAllWeapons()) {
     const starter = getSkill(weapon.starterAttackId);
@@ -223,7 +236,12 @@ export function GlossaryScreen(): HTMLElement {
         imageKey: weapon.imageKey,
         tags: weapon.tags,
         meta: [formatStatMods(weapon.statModifiers), `Class: ${weapon.classId}`],
-        details: starter ? [`Basic attack: ${starter.name}`] : undefined,
+        details: [
+          ...(starter ? [`Basic attack: ${starter.name}`] : []),
+          ...(weapon.starterBlockId
+            ? [`Block skill: ${getSkill(weapon.starterBlockId)?.name ?? weapon.starterBlockId}`]
+            : []),
+        ],
       }),
     );
   }
@@ -234,7 +252,7 @@ export function GlossaryScreen(): HTMLElement {
   const attacksSec = glossarySection(
     'attacks',
     'Attacks',
-    'Weapon skills used in combat. Basic attack (starter) has no cooldown.',
+    'Weapon skills used in combat. Spend mana on multiple skills per turn, then End Turn. Fillers cost 2 mana; big spells cost 4–6.',
   );
   for (const weapon of getAllWeapons()) {
     const attacks = getAllSkills().filter((s) => s.type === 'attack' && s.weaponId === weapon.id);
@@ -244,6 +262,7 @@ export function GlossaryScreen(): HTMLElement {
     for (const skill of attacks) {
       const isBasic = skill.id === weapon.starterAttackId;
       const levelLines = skill.levelDescriptions.map((d, i) => `Lv${i + 1}: ${d}`);
+      const mana = skill.manaCost ?? 1;
       const cd =
         skill.baseCooldown === 0
           ? 'No cooldown'
@@ -254,7 +273,7 @@ export function GlossaryScreen(): HTMLElement {
           description: skill.description,
           imageKey: skill.imageKey,
           tags: skill.tags,
-          meta: [isBasic ? 'Always available' : cd, `Max level ${skill.maxLevel}`],
+          meta: [`${mana} mana`, isBasic ? 'Filler attack' : cd, `Max level ${skill.maxLevel}`],
           details: levelLines,
         }),
       );

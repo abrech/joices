@@ -1,4 +1,4 @@
-import type { SkillDef } from '../../../types/definitions';
+import type { SkillDef, StatModifier } from '../../../types/definitions';
 
 export const keenEye: SkillDef = {
   id: 'keen-eye',
@@ -9,8 +9,16 @@ export const keenEye: SkillDef = {
   tags: ['crit'],
   classId: 'rogue',
   maxLevel: 3,
-  levelDescriptions: ['+5% crit chance.', '+8% crit chance.', '+12% crit chance.'],
-  onPassive: (_ctx, level) => [{ stat: 'critChance', flat: [0.05, 0.08, 0.12][level - 1] }],
+  levelDescriptions: [
+    '+5% crit chance.',
+    '+8% crit chance.',
+    '+12% crit chance, +1 max mana.',
+  ],
+  onPassive: (_ctx, level) => {
+    const mods: StatModifier[] = [{ stat: 'critChance', flat: [0.05, 0.08, 0.12][level - 1] }];
+    if (level >= 3) mods.push({ stat: 'maxMana', flat: 1 });
+    return mods;
+  },
 };
 
 export const hemophilia: SkillDef = {

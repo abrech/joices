@@ -3,7 +3,12 @@ import type { ShopItem } from '../../types/events';
 import { getSkill, getWeapon } from '../../content/registries';
 import { buildCombatContext } from '../combat/CombatContext';
 import { computeSynergyBonuses } from '../systems/SynergySystem';
-import { getSkillCooldown, getAttackSkills } from '../systems/SkillSystem';
+import {
+  canAffordSkill,
+  getSkillCooldown,
+  getSkillManaCost,
+  getAttackSkills,
+} from '../systems/SkillSystem';
 import { isUpgradeable } from '../systems/SkillFilters';
 
 export function countAttacks(state: GameState): number {
@@ -97,6 +102,8 @@ export function scoreShopItem(state: GameState, item: ShopItem): number {
     if (item.stat === 'spellPower') return isMage ? 60 : 15;
     if (item.stat === 'maxHp') return hpRatio < 0.6 ? 50 : 35;
     if (item.stat === 'block') return 40;
+    if (item.stat === 'maxMana') return isMage ? 55 : 35;
+    if (item.stat === 'manaRegen') return isMage ? 50 : 30;
     if (item.stat === 'critChance') return 30;
   }
   return 5;
@@ -111,16 +118,26 @@ export function combatSkillScore(state: GameState, skillId: string): number {
 
   const cd = combat.skillCooldowns[skillId] ?? 0;
   if (cd > 0) return -1;
+  if (!canAffordSkill(combat, skillId)) return -1;
+
+  const skill = getSkill(skillId);
+  if (!skill) return 0;
 
   const damage = estimateCombatDamage(state, skillId);
   const cooldown = getSkillCooldown(skillId, owned.level);
+  const manaCost = getSkillManaCost(skillId);
   let score = damage / (cooldown + 1);
+  score += damage / Math.max(1, manaCost * 2);
+
+  const hpRatio = state.run.player.hp / Math.max(1, state.run.player.stats.maxHp);
+  if (damage === 0 && skill.type === 'attack') {
+    score = hpRatio < 0.55 ? 12 : -1;
+  }
 
   const totalHp = combat.enemies.reduce((s, e) => s + e.hp, 0);
   if (damage >= totalHp) score += 50;
   const living = combat.enemies.filter((e) => e.hp > 0).length;
-  const skill = getSkill(skillId);
-  if (living > 1 && skill?.tags.includes('aoe') && damage > 0) score += 25;
+  if (living > 1 && skill.tags.includes('aoe') && damage > 0) score += 25;
 
   const basic = isBasicAttack(state, skillId);
   if (!basic && damage > 0) score += 22;

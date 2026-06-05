@@ -3,20 +3,21 @@ import type { SkillDef } from '../../../types/definitions';
 export const poisonDart: SkillDef = {
   id: 'crossbow-poison-dart',
   name: 'Poison Dart',
-  description: 'Your default crossbow shot. Always available.',
+  description: 'Poisoned bolt. Low-cost filler.',
   imageKey: 'poison-dart',
   type: 'attack',
   tags: ['poison', 'ranged'],
   weaponId: 'hand-crossbow',
   maxLevel: 3,
   baseCooldown: 0,
+  manaCost: 2,
   levelDescriptions: [
-    'Deal 72% attack + 3 poison. Always available.',
-    'Deal 90% attack + 4 poison. Always available.',
-    'Deal 108% attack + 5 poison. Always available.',
+    'Deal 55% attack + poison (2 mana).',
+    'Deal 68% attack + poison (2 mana).',
+    'Deal 82% attack + poison (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.72, 0.9, 1.08][level - 1];
+    const mult = [0.55, 0.68, 0.82][level - 1];
     const stacks = [3, 4, 5][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
@@ -36,14 +37,15 @@ export const markedShot: SkillDef = {
   tags: ['poison', 'ranged'],
   weaponId: 'hand-crossbow',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 4,
   levelDescriptions: [
-    'Deal 95% attack + 2 poison. Cooldown: 3 turns.',
-    'Deal 110% attack + 3 poison. Cooldown: 2 turns.',
-    'Deal 125% attack + 3 poison. Cooldown: 1 turn.',
+    'Deal 100% attack + poison (4 mana). CD 2.',
+    'Deal 118% attack + poison (4 mana). CD 1.',
+    'Deal 138% attack + poison (4 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.15, 1.3][level - 1];
+    const mult = [1.0, 1.18, 1.38][level - 1];
     const stacks = [3, 3, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {
@@ -64,14 +66,15 @@ export const volley: SkillDef = {
   tags: ['poison', 'ranged', 'aoe'],
   weaponId: 'hand-crossbow',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 6,
   levelDescriptions: [
-    'Deal 75% attack + 3 poison. Cooldown: 3 turns.',
-    'Deal 90% attack + 4 poison. Cooldown: 2 turns.',
-    'Deal 105% attack + 5 poison. Cooldown: 1 turn.',
+    'Deal 88% attack + poison (6 mana). CD 2.',
+    'Deal 105% attack + poison (6 mana). CD 1.',
+    'Deal 122% attack + poison (6 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.82, 0.98, 1.12][level - 1];
+    const mult = [0.88, 1.05, 1.22][level - 1];
     const stacks = [3, 4, 5][level - 1];
     const dmg = Math.floor(ctx.player.stats.attack * mult);
     return {

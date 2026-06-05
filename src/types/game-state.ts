@@ -65,6 +65,7 @@ export interface CombatState {
   enemyPhaseIndex: number;
   log: CombatLogEntry[];
   skillCooldowns: Record<string, number>;
+  currentMana: number;
   playerDodgeNext: boolean;
   playerCounterDamage: number;
   playerBonusBlock: number;
@@ -97,7 +98,7 @@ export interface RunPacing {
   combatsThisRun: number;
 }
 
-export const RUN_LOG_VERSION = 1;
+export const RUN_LOG_VERSION = 2;
 export const MAX_STORED_RUN_LOGS = 30;
 
 export type RunActionPayload =
@@ -106,6 +107,7 @@ export type RunActionPayload =
   | { kind: 'pickFloor'; index: number; eventId: string }
   | { kind: 'combatAttack' }
   | { kind: 'combatSkill'; skillId: string }
+  | { kind: 'combatEndTurn' }
   | { kind: 'claimLoot' }
   | { kind: 'selectSkill'; skillId: string }
   | { kind: 'skipSkillPick' }
@@ -185,7 +187,15 @@ export function createInitialRunState(seed = Date.now()): RunState {
       hp: 0,
       gold: 0,
       skills: [],
-      stats: { maxHp: 0, attack: 0, critChance: 0, block: 0, spellPower: 0 },
+      stats: {
+        maxHp: 0,
+        attack: 0,
+        critChance: 0,
+        block: 0,
+        spellPower: 0,
+        maxMana: 0,
+        manaRegen: 0,
+      },
       activeSynergyIds: [],
     },
     phase: 'classSelect',

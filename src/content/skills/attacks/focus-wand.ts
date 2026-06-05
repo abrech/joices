@@ -3,20 +3,21 @@ import type { SkillDef } from '../../../types/definitions';
 export const arcaneBolt: SkillDef = {
   id: 'arcane-bolt',
   name: 'Arcane Bolt',
-  description: 'Your default wand bolt. Always available.',
+  description: 'Fast wand bolt. Low-cost filler.',
   imageKey: 'fireball',
   type: 'attack',
   tags: ['magic'],
   weaponId: 'focus-wand',
   maxLevel: 3,
   baseCooldown: 0,
+  manaCost: 2,
   levelDescriptions: [
-    'Deal 95% spell power damage. Always available.',
-    'Deal 115% spell power damage. Always available.',
-    'Deal 135% spell power damage. Always available.',
+    'Deal 55% spell power (2 mana).',
+    'Deal 70% spell power (2 mana).',
+    'Deal 85% spell power (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.2, 1.4][level - 1];
+    const mult = [0.55, 0.7, 0.85][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return { damage: dmg, logMessage: `Arcane Bolt strikes for ${dmg}!` };
   },
@@ -31,14 +32,15 @@ export const focusBurn: SkillDef = {
   tags: ['fire', 'magic'],
   weaponId: 'focus-wand',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 4,
   levelDescriptions: [
-    'Deal 90% spell power + 2 burn. Cooldown: 3 turns.',
-    'Deal 105% spell power + 2 burn. Cooldown: 2 turns.',
-    'Deal 120% spell power + 3 burn. Cooldown: 1 turn.',
+    'Deal 95% spell power + burn (4 mana). CD 2.',
+    'Deal 115% spell power + burn (4 mana). CD 1.',
+    'Deal 135% spell power + burn (4 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.95, 1.12, 1.28][level - 1];
+    const mult = [0.95, 1.15, 1.35][level - 1];
     const stacks = [3, 3, 4][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return {
@@ -58,14 +60,15 @@ export const pierceRay: SkillDef = {
   tags: ['magic', 'pierce'],
   weaponId: 'focus-wand',
   maxLevel: 3,
-  baseCooldown: 3,
+  baseCooldown: 2,
+  manaCost: 5,
   levelDescriptions: [
-    'Deal 125% spell power damage. Cooldown: 3 turns.',
-    'Deal 145% spell power damage. Cooldown: 2 turns.',
-    'Deal 170% spell power damage. Cooldown: 1 turn.',
+    'Deal 110% spell power (5 mana). CD 2.',
+    'Deal 130% spell power (5 mana). CD 1.',
+    'Deal 155% spell power (5 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.3, 1.5, 1.75][level - 1];
+    const mult = [1.1, 1.3, 1.55][level - 1];
     const dmg = Math.floor(ctx.player.stats.spellPower * mult);
     return {
       damage: dmg,

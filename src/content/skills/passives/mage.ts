@@ -1,4 +1,4 @@
-import type { SkillDef } from '../../../types/definitions';
+import type { SkillDef, StatModifier } from '../../../types/definitions';
 import { getSkill } from '../../registries';
 
 export const burningAura: SkillDef = {
@@ -24,25 +24,22 @@ export const burningAura: SkillDef = {
 export const arcaneBattery: SkillDef = {
   id: 'arcane-battery',
   name: 'Arcane Battery',
-  description: 'Gain spell power for each magic-tagged ability owned.',
+  description: 'Expands your mana pool and recovery.',
   imageKey: 'arcane-battery',
   type: 'passive',
   tags: ['magic'],
   classId: 'mage',
   maxLevel: 3,
   levelDescriptions: [
-    '+2 spell power per magic ability.',
-    '+3 spell power per magic ability.',
-    '+5 spell power per magic ability.',
+    '+2 max mana.',
+    '+3 max mana, +1 mana regen.',
+    '+4 max mana, +1 mana regen.',
   ],
-  onPassive: (ctx, level) => {
-    const perSkill = [2, 3, 5][level - 1];
-    let count = 0;
-    for (const os of ctx.ownedSkills) {
-      const skill = getSkill(os.id);
-      if (skill?.tags.includes('magic')) count++;
-    }
-    return [{ stat: 'spellPower', flat: count * perSkill }];
+  onPassive: (_ctx, level) => {
+    const maxMana = [2, 3, 4][level - 1];
+    const mods: StatModifier[] = [{ stat: 'maxMana', flat: maxMana }];
+    if (level >= 2) mods.push({ stat: 'manaRegen', flat: 1 });
+    return mods;
   },
 };
 

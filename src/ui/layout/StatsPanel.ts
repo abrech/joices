@@ -55,6 +55,8 @@ export function StatsPanel(state: GameState): HTMLElement {
     ['Crit', `${Math.round(player.stats.critChance * 100)}%`],
     ['Block', String(player.stats.block)],
     ['Spell', String(player.stats.spellPower)],
+    ['Mana', `${state.run.combat?.currentMana ?? player.stats.maxMana} / ${player.stats.maxMana}`],
+    ['Mana regen', `+${player.stats.manaRegen} / turn`],
     ['Gold', String(player.gold)],
   ];
 

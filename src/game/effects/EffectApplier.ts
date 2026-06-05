@@ -97,6 +97,7 @@ export function applyEffects(state: GameState, effects: GameEffect[]): GameState
           combat: startCombat({
             enemies: combatEnemies,
             skillCooldowns: initSkillCooldowns(run),
+            initialMana: run.player.stats.maxMana,
             isBoss: effect.isBoss ?? false,
             goldReward: totalGold,
           }),

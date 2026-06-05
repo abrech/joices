@@ -3,7 +3,7 @@ import type { Stats, EnemyTier } from '../../types/definitions';
 export const ELITE_STAT_MULTIPLIER = 1.1;
 
 export function hpMultiplier(floor: number): number {
-  const rate = floor <= 3 ? 0.06 : 0.12;
+  const rate = floor <= 3 ? 0.06 : 0.09;
   return 1 + floor * rate;
 }
 
@@ -14,7 +14,7 @@ export function attackMultiplier(floor: number): number {
 
 /** Softer HP ramp for boss fights only (10% per floor after floor 3). */
 export function bossHpMultiplier(floor: number): number {
-  const rate = floor <= 3 ? 0.06 : 0.10;
+  const rate = floor <= 3 ? 0.06 : 0.08;
   return 1 + floor * rate;
 }
 

@@ -89,7 +89,7 @@ export const greedyPolicy: AutoplayPolicy = {
       }
     }
 
-    return bestId;
+    return bestScore >= 0 ? bestId : null;
   },
 
   selectSkillReward(state, skillIds, _context) {

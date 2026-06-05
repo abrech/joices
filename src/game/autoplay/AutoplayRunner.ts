@@ -1,13 +1,13 @@
 import type { GameState, RunActionPayload, RunRecord } from '../../types/game-state';
 import { createEmptyProfile, createInitialRunState } from '../../types/game-state';
 import type { LootPayload, ShopPayload, SkillPickPayload } from '../../types/events';
-import { getWeapon } from '../../content/registries';
 import { appendAction, buildRunRecord } from '../logging/RunLogger';
 import { assertReplayMatches, replayRun } from '../logging/ReplayRunner';
 import { MemoryProfileStore, setProfileStore } from '../profile/ProfileStore';
 import {
   applyClaimLoot,
   applyCombatSkill,
+  applyCombatEndTurn,
   applyLootSkillReward,
   applyPickFloor,
   applySelectClass,
@@ -33,20 +33,86 @@ import {
 const MAX_STEPS_PER_RUN = 8000;
 const MAX_SHOP_BUYS_PER_VISIT = 12;
 const MAX_COMBAT_LOOP = 500;
+const MAX_SKILL_CASTS_PER_PHASE = 32;
+const MAX_COMBAT_STALE_HP_ROUNDS = 12;
+
+/** Persists across step() calls so stale-HP detection is not reset every resolveCombat entry. */
+let combatStaleSession: string | null = null;
+let combatStaleHp: number | null = null;
+let combatStaleRounds = 0;
+
+function resetCombatStaleTracking(): void {
+  combatStaleSession = null;
+  combatStaleHp = null;
+  combatStaleRounds = 0;
+}
+
+function updateCombatStaleTracking(state: GameState): boolean {
+  const combat = state.run.combat;
+  if (!combat || combat.finished) {
+    resetCombatStaleTracking();
+    return false;
+  }
+
+  const session = combat.enemies.map((e) => e.instanceId).join('|');
+  const enemyHp = totalEnemyHp(state);
+
+  if (combatStaleSession !== session) {
+    combatStaleSession = session;
+    combatStaleHp = enemyHp;
+    combatStaleRounds = 0;
+    return false;
+  }
+
+  if (combatStaleHp === enemyHp) combatStaleRounds++;
+  else {
+    combatStaleHp = enemyHp;
+    combatStaleRounds = 0;
+  }
+
+  return combatStaleRounds >= MAX_COMBAT_STALE_HP_ROUNDS;
+}
 
 function commit(state: GameState, action?: RunActionPayload): GameState {
   const run = action ? appendAction(state.run, action) : state.run;
   return { ...state, run };
 }
 
-function playCombatTurn(state: GameState, policy: AutoplayPolicy): GameState | null {
-  const skillId = policy.selectCombatSkill(state);
-  if (!skillId) return null;
+function spendPlayerPhase(state: GameState, policy: AutoplayPolicy): GameState | null {
+  let current = state;
+  let progressed = false;
+  let casts = 0;
 
-  const next = drainCombatEnemyPhase(applyCombatSkill(state, skillId));
-  if (next === state) return null;
+  while (current.run.combat?.turn === 'player' && !current.run.combat.finished) {
+    if (casts >= MAX_SKILL_CASTS_PER_PHASE) break;
 
-  return commit(next, { kind: 'combatSkill', skillId });
+    const skillId = policy.selectCombatSkill(current);
+    if (!skillId) break;
+
+    const next = applyCombatSkill(current, skillId);
+    if (next === current || next.run === current.run) break;
+
+    current = commit(next, { kind: 'combatSkill', skillId });
+    casts++;
+    progressed = true;
+  }
+
+  if (!current.run.combat || current.run.combat.finished) {
+    return progressed || current !== state ? current : null;
+  }
+  if (current.run.combat.turn !== 'player') {
+    return progressed || current !== state ? current : null;
+  }
+
+  const ended = applyCombatEndTurn(current);
+  if (ended === current) return null;
+
+  current = commit(ended, { kind: 'combatEndTurn' });
+  return drainCombatEnemyPhase(current);
+}
+
+function totalEnemyHp(state: GameState): number {
+  return state.run.combat?.enemies.reduce((sum, e) => sum + e.hp, 0) ?? 0;
 }
 
 function resolveCombat(state: GameState, policy: AutoplayPolicy): GameState {
@@ -55,15 +121,21 @@ function resolveCombat(state: GameState, policy: AutoplayPolicy): GameState {
 
   while (current.run.combat && !current.run.combat.finished && loops < MAX_COMBAT_LOOP) {
     loops++;
+    if (updateCombatStaleTracking(current)) break;
+
     if (current.run.combat.turn === 'player') {
       const before = fingerprint(current);
-      const next = playCombatTurn(current, policy);
+      const next = spendPlayerPhase(current, policy);
       if (!next) break;
       current = next;
       if (!current.run.combat?.finished && fingerprint(current) === before) break;
     } else {
       current = drainCombatEnemyPhase(current);
     }
+  }
+
+  if (current.run.combat?.finished) {
+    resetCombatStaleTracking();
   }
 
   if (current.run.combat?.finished && current.run.combat.result === 'lose') {
@@ -154,13 +226,8 @@ function tryEscape(state: GameState, _policy: AutoplayPolicy): GameState | null 
   const { phase, activeEvent, combat, floorOptions } = state.run;
 
   if (combat && !combat.finished && combat.turn === 'player') {
-    const basicId = getWeapon(state.run.player.weaponId)?.starterAttackId;
-    if (basicId) {
-      const next = drainCombatEnemyPhase(applyCombatSkill(state, basicId));
-      if (next !== state) {
-        return commit(next, { kind: 'combatSkill', skillId: basicId });
-      }
-    }
+    const escaped = spendPlayerPhase(state, _policy);
+    if (escaped && escaped !== state) return escaped;
   }
 
   if (activeEvent?.screen === 'shop') {

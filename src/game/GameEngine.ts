@@ -15,6 +15,7 @@ import {
   applySelectWeapon,
   applyPickFloor,
   applyCombatSkill,
+  applyCombatEndTurn,
   applyClaimLoot,
   applyLootSkillReward,
   applySkipCombatLootSkillPick,
@@ -118,6 +119,11 @@ export class GameEngine {
   combatUseSkill(skillId: string): void {
     const next = applyCombatSkill(this.state, skillId);
     this.handleCombatEnd(next, { kind: 'combatSkill', skillId });
+  }
+
+  combatEndTurn(): void {
+    const next = applyCombatEndTurn(this.state);
+    this.handleCombatEnd(next, { kind: 'combatEndTurn' });
   }
 
   resolveEnemyTurn(): void {

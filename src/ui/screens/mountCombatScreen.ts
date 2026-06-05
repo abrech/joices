@@ -2,7 +2,11 @@ import type { GameEngine } from '../../game/GameEngine';
 import type { CombatEnemyInstance, CombatLastAction, CombatState, GameState } from '../../types/game-state';
 import { enemyDisplayLabel, pickLowestHpTargetIndex } from '../../game/combat/combat-state';
 import { getEnemy, getSkill, getClass, getWeapon } from '../../content/registries';
-import { getSkillDescription } from '../../game/systems/SkillSystem';
+import {
+  canAffordSkill,
+  getSkillDescription,
+  getSkillManaCost,
+} from '../../game/systems/SkillSystem';
 import { AssetImage } from '../components/AssetImage';
 import { CombatLog, scrollCombatLogToLatest } from '../components/CombatLog';
 import { StatusBadges } from '../components/StatusBadges';
@@ -211,6 +215,15 @@ function updateCombatDom(root: HTMLElement, state: GameState): void {
   playerFighter.querySelector<HTMLElement>('.hp-bar__fill')!.style.width =
     `${(run.player.hp / run.player.stats.maxHp) * 100}%`;
 
+  const manaText = playerFighter.querySelector('[data-mana-text]');
+  const manaFill = playerFighter.querySelector<HTMLElement>('.mana-bar__fill');
+  if (manaText) {
+    manaText.textContent = `${combat.currentMana} / ${run.player.stats.maxMana} Mana`;
+  }
+  if (manaFill) {
+    manaFill.style.width = `${(combat.currentMana / Math.max(1, run.player.stats.maxMana)) * 100}%`;
+  }
+
   const pb = playerFighter.querySelector('[data-badges]')!;
   pb.replaceChildren(
     StatusBadges({
@@ -291,9 +304,18 @@ function refreshActionButtons(
     if (!btn) continue;
 
     const cd = combat.skillCooldowns[owned.id] ?? 0;
-    btn.textContent = cd > 0 ? `${skill.name} (CD: ${cd})` : skill.name;
-    btn.disabled = cd > 0 || busy;
+    const cost = getSkillManaCost(owned.id);
+    const affordable = canAffordSkill(combat, owned.id);
+    const label =
+      cd > 0
+        ? `${skill.name} (CD: ${cd})`
+        : `${skill.name} (${cost} mana)`;
+    btn.textContent = label;
+    btn.disabled = cd > 0 || !affordable || busy;
   }
+
+  const endBtn = actions.querySelector<HTMLButtonElement>('[data-end-turn]');
+  if (endBtn) endBtn.disabled = busy;
 }
 
 function buildFighter(
@@ -304,6 +326,7 @@ function buildFighter(
   maxHp: number,
   enemyFill?: boolean,
   instanceId?: string,
+  mana?: { current: number; max: number },
 ): HTMLElement {
   const div = document.createElement('div');
   div.className = 'combat-fighter';
@@ -324,6 +347,22 @@ function buildFighter(
   fill.style.width = `${(hp / maxHp) * 100}%`;
   hpBar.appendChild(fill);
   div.appendChild(hpBar);
+
+  if (side === 'player' && mana) {
+    const manaText = document.createElement('p');
+    manaText.dataset.manaText = '';
+    manaText.className = 'combat-mana-text';
+    manaText.textContent = `${mana.current} / ${mana.max} Mana`;
+    div.appendChild(manaText);
+    const manaBar = document.createElement('div');
+    manaBar.className = 'mana-bar';
+    const manaFill = document.createElement('div');
+    manaFill.className = 'mana-bar__fill';
+    manaFill.style.width = `${(mana.current / Math.max(1, mana.max)) * 100}%`;
+    manaBar.appendChild(manaFill);
+    div.appendChild(manaBar);
+  }
+
   const badges = document.createElement('div');
   badges.dataset.badges = '';
   div.appendChild(badges);
@@ -358,12 +397,15 @@ function buildActions(engine: GameEngine, run: GameState['run'], combat: CombatS
 
   for (const { owned, skill } of attacks) {
     const cd = combat.skillCooldowns[owned.id] ?? 0;
+    const cost = getSkillManaCost(owned.id);
+    const affordable = canAffordSkill(combat, owned.id);
     const isBasic = owned.id === basicId;
     const btn = document.createElement('button');
     btn.className = isBasic ? 'btn btn--primary' : 'btn btn--secondary';
     btn.dataset.skillId = owned.id;
-    btn.textContent = cd > 0 ? `${skill.name} (CD: ${cd})` : skill.name;
-    btn.disabled = cd > 0;
+    btn.textContent =
+      cd > 0 ? `${skill.name} (CD: ${cd})` : `${skill.name} (${cost} mana)`;
+    btn.disabled = cd > 0 || !affordable;
     btn.addEventListener('click', () => {
       if (busy) return;
       engine.combatUseSkill(owned.id);
@@ -371,9 +413,21 @@ function buildActions(engine: GameEngine, run: GameState['run'], combat: CombatS
     const levelDesc = getSkillDescription(owned.id, owned.level);
     const tagsLine = formatTagsLine(skill.tags);
     const cdLine = cd > 0 ? `\nOn cooldown: ${cd} turn(s)` : '';
-    const tooltipParts = [skill.description, levelDesc, tagsLine, cdLine].filter(Boolean);
+    const manaLine = `Mana cost: ${cost}`;
+    const tooltipParts = [skill.description, levelDesc, manaLine, tagsLine, cdLine].filter(Boolean);
     actions.appendChild(Tooltip(tooltipParts.join('\n\n'), btn, { variant: 'action' }));
   }
+
+  const endTurn = document.createElement('button');
+  endTurn.type = 'button';
+  endTurn.className = 'btn btn--accent';
+  endTurn.dataset.endTurn = '';
+  endTurn.textContent = 'End Turn';
+  endTurn.addEventListener('click', () => {
+    if (busy) return;
+    engine.combatEndTurn();
+  });
+  actions.appendChild(endTurn);
 
   return actions;
 }
@@ -428,6 +482,9 @@ function createCombatRoot(engine: GameEngine, state: GameState): HTMLElement {
     classDef?.imageKey ?? 'warrior',
     run.player.hp,
     run.player.stats.maxHp,
+    false,
+    undefined,
+    { current: combat.currentMana, max: run.player.stats.maxMana },
   );
   playerDiv.querySelector('[data-badges]')!.appendChild(
     StatusBadges({ statuses: combat.playerStatuses, dodgeNext: combat.playerDodgeNext }),
@@ -473,14 +530,32 @@ async function processCombatUpdate(
   const combat = state.run.combat;
   if (!combat) return;
 
-  const playerJustActed = prev?.turn === 'player' && combat.turn === 'enemy' && !combat.finished;
+  const playerEndedTurn =
+    prev?.turn === 'player' && combat.turn === 'enemy' && !combat.finished;
+  const playerUsedSkill =
+    prev?.turn === 'player' &&
+    combat.turn === 'player' &&
+    !combat.finished &&
+    combat.lastAction?.actor === 'player' &&
+    (prev.lastAction !== combat.lastAction ||
+      prev.currentMana !== combat.currentMana);
   const enemyJustActed = prev?.turn === 'enemy' && combat.turn === 'player' && !combat.finished;
   const enemyPhaseContinues =
     prev?.turn === 'enemy' && combat.turn === 'enemy' && !combat.finished && !!combat.lastAction;
   const justFinished = combat.finished && !prev?.finished;
   const enemyName = enemyDisplayLabel(combat);
 
-  if (playerJustActed && !combat.finished) {
+  if (playerUsedSkill) {
+    busy = true;
+    updateCombatDom(root, state);
+    await playActionAnimations(root, combat.lastAction, enemyName, false);
+    engine.clearCombatLastAction();
+    busy = false;
+    updateCombatDom(root, engine.getState());
+    return;
+  }
+
+  if (playerEndedTurn && !combat.finished) {
     busy = true;
     updateCombatDom(root, state);
     await playActionAnimations(root, combat.lastAction, enemyName, false);

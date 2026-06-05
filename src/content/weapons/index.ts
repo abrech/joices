@@ -9,6 +9,7 @@ export const longsword: WeaponDef = {
   statModifiers: { attack: 3, block: 3 },
   tags: ['melee'],
   starterAttackId: 'sword-slash',
+  starterBlockId: 'shield-guard',
 };
 
 export const warhammer: WeaponDef = {
@@ -20,6 +21,7 @@ export const warhammer: WeaponDef = {
   statModifiers: { attack: 5, critChance: -0.02 },
   tags: ['melee', 'heavy'],
   starterAttackId: 'crushing-blow',
+  starterBlockId: 'iron-brace',
 };
 
 export const arcaneStaff: WeaponDef = {
@@ -50,7 +52,7 @@ export const twinDaggers: WeaponDef = {
   description: 'Quick multi-hit attacks. Applies bleed stacks easily.',
   imageKey: 'twin-daggers',
   classId: 'rogue',
-  statModifiers: { attack: 4, critChance: 0.08 },
+  statModifiers: { attack: 4, critChance: 0.08, manaRegen: 1 },
   tags: ['melee', 'bleed'],
   starterAttackId: 'twin-slash',
 };
