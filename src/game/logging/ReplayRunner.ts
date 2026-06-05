@@ -1,25 +1,10 @@
-import type { GameState, ProfileState, RunAction, RunRecord } from '../../types/game-state';
+import type { GameState, ProfileState, RunRecord } from '../../types/game-state';
 import { RUN_LOG_VERSION, createEmptyProfile, createInitialRunState } from '../../types/game-state';
-import type { SkillPickPayload } from '../../types/events';
-import { getWeapon } from '../../content/registries';
-import type { LootPayload } from '../../types/events';
 import {
-  applyClaimLoot,
-  applyCombatSkill,
-  applyCombatEndTurn,
-  applyLootSkillReward,
-  applyPickFloor,
-  applySelectClass,
-  applySelectSkill,
-  applySelectWeapon,
-  applySkipCombatLootSkillPick,
-  applySkipLootSkillReward,
-  drainCombatEnemyPhase,
-  needsLootScreenBeforeClaim,
-  openCombatLoot,
-} from '../RunCommands';
-import { completeEvent } from '../events/EventResolver';
-import { purchaseShopItem } from '../shop/ShopPurchase';
+  dispatchAction,
+  prepareReplayAfterCombatWin,
+  prepareReplayBeforeAction,
+} from '../dispatch';
 
 export function replayRun(record: RunRecord, profile?: ProfileState): GameState {
   if (record.logVersion !== RUN_LOG_VERSION) {
@@ -35,88 +20,12 @@ export function replayRun(record: RunRecord, profile?: ProfileState): GameState 
     const action = record.actions[i];
     const next = record.actions[i + 1];
 
-    if (
-      (action.kind === 'claimLoot' || action.kind === 'selectSkill') &&
-      needsLootScreenBeforeClaim(state)
-    ) {
-      state = openCombatLoot(state);
-    }
-
-    state = applyReplayAction(state, action);
-
-    if (
-      (action.kind === 'combatAttack' ||
-        action.kind === 'combatSkill' ||
-        action.kind === 'combatEndTurn') &&
-      state.run.combat?.finished &&
-      state.run.combat.result === 'win' &&
-      next &&
-      (next.kind === 'claimLoot' ||
-        next.kind === 'selectSkill' ||
-        next.kind === 'skipSkillPick')
-    ) {
-      state = openCombatLoot(state);
-    }
+    state = prepareReplayBeforeAction(state, action);
+    state = dispatchAction(state, action, { drainEnemyPhase: true });
+    state = prepareReplayAfterCombatWin(state, action, next);
   }
 
   return state;
-}
-
-function applySkipSkillPickReplay(state: GameState): GameState {
-  const { activeEvent } = state.run;
-  if (activeEvent?.screen === 'loot') {
-    return applySkipLootSkillReward(state);
-  }
-  const payload = activeEvent?.payload as SkillPickPayload | undefined;
-  if (activeEvent?.screen === 'skillPick' && payload?.afterCombatLoot) {
-    return applySkipCombatLootSkillPick(state);
-  }
-  return completeEvent(state, '__skip__');
-}
-
-function applyReplayAction(state: GameState, action: RunAction): GameState {
-  switch (action.kind) {
-    case 'selectClass':
-      return applySelectClass(state, action.classId);
-    case 'selectWeapon':
-      return applySelectWeapon(state, action.weaponId);
-    case 'pickFloor':
-      return applyPickFloor(state, action.index);
-    case 'combatAttack': {
-      const basicId = getWeapon(state.run.player.weaponId)?.starterAttackId;
-      if (!basicId) return state;
-      return drainCombatEnemyPhase(
-        applyCombatEndTurn(applyCombatSkill(state, basicId)),
-      );
-    }
-    case 'combatSkill':
-      return applyCombatSkill(state, action.skillId);
-    case 'combatEndTurn':
-      return drainCombatEnemyPhase(applyCombatEndTurn(state));
-    case 'claimLoot':
-      return applyClaimLoot(state);
-    case 'selectSkill': {
-      if (state.run.activeEvent?.screen === 'loot') {
-        const loot = state.run.activeEvent.payload as LootPayload;
-        if (loot.skillChoices?.includes(action.skillId)) {
-          return applyLootSkillReward(state, action.skillId);
-        }
-      }
-      return applySelectSkill(state, action.skillId);
-    }
-    case 'skipSkillPick':
-      return applySkipSkillPickReplay(state);
-    case 'buyShop':
-      return purchaseShopItem(state, action.itemId);
-    case 'leaveShop':
-      return completeEvent(state, '__leave__');
-    case 'confirmHeal':
-      return completeEvent(state);
-    case 'combatDefeatContinue':
-      return completeEvent({ ...state, run: state.run }, undefined, 'lose');
-    default:
-      return state;
-  }
 }
 
 export function assertReplayMatches(

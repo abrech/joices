@@ -33,10 +33,10 @@ export function createPlayer(
     skills,
     stats: {
       maxHp: 0,
-      attack: 0,
+      strength: 0,
       critChance: 0,
       block: 0,
-      spellPower: 0,
+      spell: 0,
       maxMana: 0,
       manaRegen: 0,
     },

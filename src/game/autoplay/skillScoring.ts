@@ -2,7 +2,7 @@ import type { GameState } from '../../types/game-state';
 import type { ShopItem } from '../../types/events';
 import { getSkill, getWeapon } from '../../content/registries';
 import { buildCombatContext } from '../combat/CombatContext';
-import { computeSynergyBonuses } from '../systems/SynergySystem';
+import { combatSynergyBonuses } from '../combat/synergy-combat';
 import {
   canAffordSkill,
   getSkillCooldown,
@@ -26,7 +26,7 @@ export function estimateCombatDamage(state: GameState, skillId: string): number 
   const owned = state.run.player.skills.find((s) => s.id === skillId);
   if (!skill?.onUse || !owned) return 0;
 
-  const synergies = computeSynergyBonuses(state.run.player.skills);
+  const synergies = combatSynergyBonuses(state.run.player.skills);
   const ctx = buildCombatContext(state.run, synergies);
   const result = skill.onUse(ctx, owned.level);
   let score = result.damage ?? 0;
@@ -89,7 +89,7 @@ export function scoreShopItem(state: GameState, item: ShopItem): number {
 
   const hpRatio = player.hp / Math.max(1, player.stats.maxHp);
   const attacks = countAttacks(state);
-  const isMage = player.stats.spellPower > player.stats.attack;
+  const isMage = player.stats.spell > player.stats.strength;
 
   if (item.type === 'skill' && item.skillId) {
     return 120 - attacks * 20 + scoreSkillChoice(state, item.skillId);
@@ -98,8 +98,8 @@ export function scoreShopItem(state: GameState, item: ShopItem): number {
     return hpRatio < 0.5 ? 90 : hpRatio < 0.75 ? 40 : 10;
   }
   if (item.type === 'stat' && item.stat) {
-    if (item.stat === 'attack') return isMage ? 25 : 55;
-    if (item.stat === 'spellPower') return isMage ? 60 : 15;
+    if (item.stat === 'strength') return isMage ? 25 : 55;
+    if (item.stat === 'spell') return isMage ? 60 : 15;
     if (item.stat === 'maxHp') return hpRatio < 0.6 ? 50 : 35;
     if (item.stat === 'block') return 40;
     if (item.stat === 'maxMana') return isMage ? 55 : 35;

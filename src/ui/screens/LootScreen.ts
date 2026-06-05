@@ -4,10 +4,7 @@ import { getSkill } from '../../content/registries';
 import { AssetImage } from '../components/AssetImage';
 import { Card } from '../components/Card';
 import { getSkillDescription } from '../../game/systems/SkillSystem';
-
-function rewardTypeLabel(type: 'attack' | 'passive'): string {
-  return type === 'attack' ? 'Attack' : 'Passive';
-}
+import { skillTypeLabel } from './shared/skillCardMeta';
 
 export function LootScreen(engine: GameEngine, forModal = false): HTMLElement {
   const payload = engine.getState().run.activeEvent?.payload as LootPayload;
@@ -106,7 +103,7 @@ export function LootScreen(engine: GameEngine, forModal = false): HTMLElement {
       for (const skillId of payload.skillChoices) {
         const skill = getSkill(skillId);
         if (!skill) continue;
-        const kind = rewardTypeLabel(skill.type);
+        const kind = skillTypeLabel(skill.type);
         grid.appendChild(
           Card({
             title: `${skill.name} (${kind})`,

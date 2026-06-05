@@ -6,6 +6,7 @@ import { allSkills } from './skills';
 import { allEnemies } from './enemies';
 import { allSynergies } from './synergies';
 import { allEvents } from './events';
+import { SHOP_HEAL_ITEM, SHOP_STAT_ITEMS } from './shop/catalog';
 
 const classMap = new Map(allClasses.map((c) => [c.id, c]));
 const weaponMap = new Map(allWeapons.map((w) => [w.id, w]));
@@ -76,4 +77,8 @@ export function getAllEvents(): EventDef[] {
 
 export function getFloorEvents(): EventDef[] {
   return allEvents.filter((e) => e.id !== 'boss');
+}
+
+export function getShopCatalogItems() {
+  return { heal: SHOP_HEAL_ITEM, stats: SHOP_STAT_ITEMS };
 }

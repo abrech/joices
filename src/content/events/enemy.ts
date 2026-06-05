@@ -5,8 +5,6 @@ import { buildEnemyPreview } from '../../game/progression/PacingRules';
 import { isFirstCombatFloor, isBossFloor } from '../../game/progression/PacingRules';
 import { WEIGHT_ENEMY } from '../../game/progression/EncounterWeights';
 
-export { learnableSkillFilter as defaultSkillFilter } from '../../game/systems/SkillFilters';
-
 export const enemyEvent: EventDef = {
   id: 'enemy',
   name: 'Enemy Encounter',

@@ -2,7 +2,7 @@ import type { EventDef, ShopPayload } from '../../types/events';
 import { getAllSkills } from '../registries';
 import { scaleShopPrice } from '../../game/progression/Scaling';
 import { SHOP_HEAL_ITEM, SHOP_SKILL_BASE_PRICE, SHOP_STAT_ITEMS } from '../shop/catalog';
-import { defaultSkillFilter } from './enemy';
+import { defaultSkillFilter } from '../../game/systems/SkillFilters';
 import { WEIGHT_SHOP } from '../../game/progression/EncounterWeights';
 import { isBossFloor } from '../../game/progression/PacingRules';
 

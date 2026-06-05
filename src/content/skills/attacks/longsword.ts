@@ -1,4 +1,5 @@
 import type { SkillDef } from '../../../types/definitions';
+import { counterDamage, physicalDamage } from '../../../game/combat/skill-damage';
 
 export const swordSlash: SkillDef = {
   id: 'sword-slash',
@@ -12,13 +13,12 @@ export const swordSlash: SkillDef = {
   baseCooldown: 0,
   manaCost: 2,
   levelDescriptions: [
-    'Deal 60% attack (2 mana).',
-    'Deal 72% attack (2 mana).',
-    'Deal 85% attack (2 mana).',
+    'Deal 3 + strength (2 mana).',
+    'Deal 4 + strength (2 mana).',
+    'Deal 5 + strength (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.6, 0.72, 0.85][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
+    const dmg = physicalDamage(ctx, level, [3, 4, 5]);
     return { damage: dmg, logMessage: `Sword Slash hits for ${dmg}!` };
   },
 };
@@ -57,13 +57,12 @@ export const longswordShieldBash: SkillDef = {
   baseCooldown: 2,
   manaCost: 5,
   levelDescriptions: [
-    'Deal 100% attack and stun (5 mana). CD 2.',
-    'Deal 120% attack and stun (5 mana). CD 1.',
-    'Deal 135% attack, stun, +4 block (5 mana).',
+    'Deal 6 + strength and stun (5 mana). CD 2.',
+    'Deal 8 + strength and stun (5 mana). CD 1.',
+    'Deal 10 + strength, stun, +4 block (5 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.2, 1.35][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [6, 8, 10]);
     return {
       damage: dmg,
       stun: true,
@@ -85,13 +84,13 @@ export const riposte: SkillDef = {
   baseCooldown: 2,
   manaCost: 4,
   levelDescriptions: [
-    'Dodge next attack, counter 60% attack (4 mana). CD 2.',
-    'Dodge and counter 85% attack (4 mana). CD 1.',
-    'Dodge and counter 105% attack (4 mana).',
+    'Dodge next attack (4 mana). CD 2.',
+    'Dodge and counter 2 + strength (4 mana). CD 1.',
+    'Dodge and counter 4 + strength (4 mana).',
   ],
   onUse: (ctx, level) => ({
     dodgeNext: true,
-    counterOnDodge: Math.floor(ctx.player.stats.attack * [0.6, 0.85, 1.05][level - 1]),
+    counterOnDodge: level >= 2 ? counterDamage(ctx, level, [0, 2, 4]) : 0,
     logMessage: 'You brace for a Riposte!',
   }),
 };

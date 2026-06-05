@@ -3,9 +3,12 @@ import type { ShopItem, ShopPayload } from '../../types/events';
 import { getSkill } from '../../content/registries';
 import { Card } from '../components/Card';
 import { getSkillDescription } from '../../game/systems/SkillSystem';
+import { skillTypeLabel } from './shared/skillCardMeta';
+import { createSelectScreenShell } from './shared/selectGrid';
 
 const STAT_ITEM_IMAGES: Record<string, string> = {
   'shop-heal': 'heal',
+  'shop-strength': 'power-strike',
   'shop-attack': 'power-strike',
   'shop-block': 'shield-bash',
   'shop-maxhp': 'thick-skin',
@@ -42,7 +45,7 @@ function shopItemDescription(item: ShopItem): string {
 function shopItemTitle(item: ShopItem): string {
   if (item.type === 'skill') {
     const skill = item.skillId ? getSkill(item.skillId) : null;
-    const kind = skill?.type === 'attack' ? 'Attack' : skill?.type === 'passive' ? 'Passive' : 'Skill';
+    const kind = skill?.type ? skillTypeLabel(skill.type) : 'Skill';
     return skill ? `${skill.name} (${kind})` : item.name;
   }
   return item.name;
@@ -52,20 +55,19 @@ export function ShopScreen(engine: GameEngine): HTMLElement {
   const state = engine.getState();
   const payload = state.run.activeEvent?.payload as ShopPayload;
 
-  const el = document.createElement('div');
-  el.innerHTML = `<h1 class="screen-title">Merchant</h1>
-    <p class="screen-subtitle">Buy what you can afford, then leave when done. You have ${state.run.player.gold} gold.</p>`;
+  const { root: el, grid } = createSelectScreenShell({
+    title: 'Merchant',
+    subtitle: `Buy what you can afford, then leave when done. You have ${state.run.player.gold} gold.`,
+  });
 
   const items = payload?.items ?? [];
   if (items.length === 0) {
+    grid.remove();
     const empty = document.createElement('p');
     empty.style.color = 'var(--text-muted)';
     empty.textContent = 'Nothing left to buy.';
     el.appendChild(empty);
   } else {
-    const grid = document.createElement('div');
-    grid.className = 'card-grid card-grid--stagger';
-
     for (const item of items) {
       const canAfford = state.run.player.gold >= item.price;
       grid.appendChild(
@@ -80,8 +82,6 @@ export function ShopScreen(engine: GameEngine): HTMLElement {
         }),
       );
     }
-
-    el.appendChild(grid);
   }
 
   const leave = document.createElement('button');

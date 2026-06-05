@@ -2,7 +2,7 @@ import type { LootItem, LootPayload, CombatPayload } from '../../types/events';
 import type { Stats } from '../../types/definitions';
 import type { GameState } from '../../types/game-state';
 import { getEnemy } from '../../content/registries';
-import { defaultSkillFilter } from '../../content/events/enemy';
+import { learnableSkillFilter } from '../systems/SkillFilters';
 import { pickSkills } from '../systems/SkillPool';
 import { scaleEnemyGold } from '../progression/Scaling';
 import { nextRandom } from '../rng';
@@ -11,8 +11,8 @@ import type { FloorContext } from '../../types/events';
 const ELITE_BONUS_GOLD_CHANCE = 0.25;
 const NORMAL_BONUS_GOLD_CHANCE = 0.1;
 
-const NORMAL_BONUS_REWARD_CHANCE = 0.28;
-const ELITE_BONUS_REWARD_CHANCE = 0.42;
+export const NORMAL_BONUS_REWARD_CHANCE = 0.32;
+export const ELITE_BONUS_REWARD_CHANCE = 0.42;
 
 const BONUS_HEAL_WEIGHT = 0.4;
 const BONUS_SKILL_WEIGHT = 0.35;
@@ -35,10 +35,14 @@ function healPercentForTier(isElite: boolean, isBoss: boolean): number {
 }
 
 function rollStatBonus(rng: () => number): { stat: keyof Stats; delta: number; name: string } {
-  if (rng() < 0.5) {
-    return { stat: 'attack', delta: 2, name: 'Sharpening Stone' };
+  const roll = rng();
+  if (roll < 0.4) {
+    return { stat: 'strength', delta: 2, name: 'Sharpening Stone' };
   }
-  return { stat: 'block', delta: 1, name: 'Reinforced Plating' };
+  if (roll < 0.75) {
+    return { stat: 'block', delta: 1, name: 'Reinforced Plating' };
+  }
+  return { stat: 'spell', delta: 2, name: 'Arcane Trinket' };
 }
 
 function tryRollBonusType(
@@ -63,7 +67,8 @@ function tryRollBonusType(
   }
 
   const { stat, delta, name } = rollStatBonus(rng);
-  const statLabel = stat === 'attack' ? 'Attack' : 'Block';
+  const statLabel =
+    stat === 'strength' ? 'Strength' : stat === 'spell' ? 'Spell' : 'Block';
   return {
     type: 'stat',
     name,
@@ -99,7 +104,7 @@ function rollCombatBonus(
   for (let i = 0; i < 3; i++) {
     const type = order[(order.indexOf(first) + i) % 3];
     if (type === 'skill') {
-      const skillChoices = pickSkills(ctx, 2, defaultSkillFilter);
+      const skillChoices = pickSkills(ctx, 2, learnableSkillFilter);
       if (skillChoices.length >= 2) return { skillChoices };
       continue;
     }

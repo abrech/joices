@@ -4,11 +4,11 @@ import { getClass, getWeapon, getSkill } from '../../content/registries';
 import { computeSynergyBonuses, getActiveSynergies } from './SynergySystem';
 
 const BASE_STATS: Stats = {
-  maxHp: 0,
-  attack: 0,
+  maxHp: 50,
+  strength: 0,
   critChance: 0,
   block: 0,
-  spellPower: 0,
+  spell: 0,
   maxMana: 0,
   manaRegen: 0,
 };
@@ -32,7 +32,11 @@ export function calculateStats(
     return { stats: { ...BASE_STATS }, synergyBonuses: {}, activeSynergyIds: [] };
   }
 
-  let stats: Stats = { ...classDef.baseStats };
+  let stats: Stats = { ...BASE_STATS };
+  for (const key of Object.keys(classDef.baseStats) as (keyof Stats)[]) {
+    const val = classDef.baseStats[key];
+    if (val !== undefined) stats[key] = (stats[key] as number) + val;
+  }
   for (const key of Object.keys(weaponDef.statModifiers) as (keyof Stats)[]) {
     const val = weaponDef.statModifiers[key];
     if (val !== undefined) stats[key] = (stats[key] as number) + val;
@@ -45,8 +49,8 @@ export function calculateStats(
   if (synergyBonuses.critBonus) {
     stats.critChance += synergyBonuses.critBonus;
   }
-  if (synergyBonuses.spellPowerBonus) {
-    stats.spellPower = Math.floor(stats.spellPower * (1 + synergyBonuses.spellPowerBonus));
+  if (synergyBonuses.spellBonus) {
+    stats.spell += Math.floor(stats.spell * synergyBonuses.spellBonus);
   }
 
   const passiveCtx = {
@@ -64,13 +68,21 @@ export function calculateStats(
   }
 
   stats = applyModifiers(stats, allMods);
-  stats.critChance = Math.min(0.75, Math.max(0, stats.critChance));
-  stats.maxHp = Math.max(1, stats.maxHp);
-  stats.attack = Math.max(0, stats.attack);
-  stats.maxMana = Math.max(1, stats.maxMana);
-  stats.manaRegen = Math.max(0, stats.manaRegen);
+  stats = clampStats(stats);
 
   return { stats, synergyBonuses, activeSynergyIds };
+}
+
+export function clampStats(stats: Stats): Stats {
+  return {
+    ...stats,
+    critChance: Math.min(0.75, Math.max(0, stats.critChance)),
+    maxHp: Math.max(1, stats.maxHp),
+    strength: Math.max(0, stats.strength),
+    spell: Math.max(0, stats.spell),
+    maxMana: Math.max(1, stats.maxMana),
+    manaRegen: Math.max(0, stats.manaRegen),
+  };
 }
 
 export function recalculatePlayerStats(player: PlayerState, profile?: ProfileState): PlayerState {

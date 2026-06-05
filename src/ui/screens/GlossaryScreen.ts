@@ -19,6 +19,10 @@ import {
   WEIGHT_SHOP,
   WEIGHT_SKILL,
 } from '../../game/progression/EncounterWeights';
+import {
+  ELITE_BONUS_REWARD_CHANCE,
+  NORMAL_BONUS_REWARD_CHANCE,
+} from '../../game/loot/LootRoller';
 import { getSkillCooldown } from '../../game/systems/SkillSystem';
 import { GlossaryEntry } from '../components/GlossaryEntry';
 
@@ -71,10 +75,18 @@ const STATUS_GLOSSARY = [
   },
 ];
 
+function lootGlossaryDescription(): string {
+  const normalPct = Math.round(NORMAL_BONUS_REWARD_CHANCE * 100);
+  const elitePct = Math.round(ELITE_BONUS_REWARD_CHANCE * 100);
+  return `Extra reward after combat (normal ${normalPct}%, elite ${elitePct}%, boss always).`;
+}
+
 const LOOT_GLOSSARY = [
   {
     title: 'Victory bonus rewards',
-    description: 'Extra reward after combat (normal 28%, elite 42%, boss always).',
+    get description() {
+      return lootGlossaryDescription();
+    },
     details: ['Heal 40% · Skill pick 35% · Stat trinket 25% of bonus rolls'],
   },
   {
@@ -90,13 +102,17 @@ function formatStatMods(mods: Partial<Stats>): string {
     const label =
       key === 'maxHp'
         ? 'Max HP'
-        : key === 'critChance'
-          ? 'Crit'
-          : key === 'maxMana'
-            ? 'Max Mana'
-            : key === 'manaRegen'
-              ? 'Mana Regen'
-              : key;
+        : key === 'strength'
+          ? 'Strength'
+          : key === 'spell'
+            ? 'Spell'
+            : key === 'critChance'
+              ? 'Crit'
+              : key === 'maxMana'
+                ? 'Max Mana'
+                : key === 'manaRegen'
+                  ? 'Mana Regen'
+                  : key;
     const suffix = key === 'critChance' ? '%' : '';
     const sign = val > 0 ? '+' : '';
     parts.push(`${sign}${val}${suffix} ${label}`);
@@ -206,7 +222,7 @@ export function GlossaryScreen(): HTMLElement {
   const classesSec = glossarySection('classes', 'Classes', 'Starting archetypes with base stats and two weapon options.');
   const classesGrid = glossaryGrid();
   for (const cls of getAllClasses()) {
-    const stats = `HP ${cls.baseStats.maxHp} · ATK ${cls.baseStats.attack} · BLK ${cls.baseStats.block} · CRIT ${Math.round(cls.baseStats.critChance * 100)}% · SP ${cls.baseStats.spellPower} · Mana ${cls.baseStats.maxMana} (+${cls.baseStats.manaRegen}/turn)`;
+    const stats = `HP +${cls.baseStats.maxHp} · STR +${cls.baseStats.strength} · BLK +${cls.baseStats.block} · CRIT ${Math.round(cls.baseStats.critChance * 100)}% · Spell +${cls.baseStats.spell} · Mana ${cls.baseStats.maxMana} (+${cls.baseStats.manaRegen}/turn)`;
     classesGrid.appendChild(
       GlossaryEntry({
         title: cls.name,
@@ -361,7 +377,7 @@ export function GlossaryScreen(): HTMLElement {
   const encSec = glossarySection(
     'encounters',
     'Encounter types',
-    'Floor options are weighted (skill 26%, enemy 37%, shop 15%, heal 22%) then filtered by rules below.',
+    `Floor options are weighted (skill ${WEIGHT_SKILL}%, enemy ${WEIGHT_ENEMY}%, shop ${WEIGHT_SHOP}%, heal ${WEIGHT_HEAL}%) then filtered by rules below.`,
   );
   const encGrid = glossaryGrid();
   for (const event of getAllEvents()) {

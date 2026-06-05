@@ -1,4 +1,5 @@
 import type { SkillDef } from '../../../types/definitions';
+import { spellDamage } from '../../../game/combat/skill-damage';
 
 export const arcaneBolt: SkillDef = {
   id: 'arcane-bolt',
@@ -12,13 +13,12 @@ export const arcaneBolt: SkillDef = {
   baseCooldown: 0,
   manaCost: 2,
   levelDescriptions: [
-    'Deal 55% spell power (2 mana).',
-    'Deal 70% spell power (2 mana).',
-    'Deal 85% spell power (2 mana).',
+    'Deal 1 + spell (2 mana).',
+    'Deal 2 + spell (2 mana).',
+    'Deal 3 + spell (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.55, 0.7, 0.85][level - 1];
-    const dmg = Math.floor(ctx.player.stats.spellPower * mult);
+    const dmg = spellDamage(ctx, level, [1, 2, 3]);
     return { damage: dmg, logMessage: `Arcane Bolt strikes for ${dmg}!` };
   },
 };
@@ -35,14 +35,13 @@ export const focusBurn: SkillDef = {
   baseCooldown: 2,
   manaCost: 4,
   levelDescriptions: [
-    'Deal 95% spell power + burn (4 mana). CD 2.',
-    'Deal 115% spell power + burn (4 mana). CD 1.',
-    'Deal 135% spell power + burn (4 mana).',
+    'Deal 5 + spell + burn (4 mana). CD 2.',
+    'Deal 7 + spell + burn (4 mana). CD 1.',
+    'Deal 9 + spell + burn (4 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.95, 1.15, 1.35][level - 1];
     const stacks = [3, 3, 4][level - 1];
-    const dmg = Math.floor(ctx.player.stats.spellPower * mult);
+    const dmg = spellDamage(ctx, level, [5, 7, 9]);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'burn', stacks },
@@ -63,13 +62,12 @@ export const pierceRay: SkillDef = {
   baseCooldown: 2,
   manaCost: 5,
   levelDescriptions: [
-    'Deal 110% spell power (5 mana). CD 2.',
-    'Deal 130% spell power (5 mana). CD 1.',
-    'Deal 155% spell power (5 mana).',
+    'Deal 6 + spell (5 mana). CD 2.',
+    'Deal 8 + spell (5 mana). CD 1.',
+    'Deal 10 + spell (5 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.1, 1.3, 1.55][level - 1];
-    const dmg = Math.floor(ctx.player.stats.spellPower * mult);
+    const dmg = spellDamage(ctx, level, [6, 8, 10]);
     return {
       damage: dmg,
       pierceNext: true,

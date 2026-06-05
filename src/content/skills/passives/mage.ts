@@ -46,16 +46,16 @@ export const arcaneBattery: SkillDef = {
 export const emberMind: SkillDef = {
   id: 'ember-mind',
   name: 'Ember Mind',
-  description: 'Spell power grows with your mastery of fire.',
+  description: 'Spell grows with your mastery of fire.',
   imageKey: 'burning-aura',
   type: 'passive',
   tags: ['fire', 'magic'],
   classId: 'mage',
   maxLevel: 3,
   levelDescriptions: [
-    '+3 spell power per fire-tagged ability.',
-    '+5 spell power per fire-tagged ability.',
-    '+8 spell power per fire-tagged ability.',
+    '+3 spell per fire-tagged ability.',
+    '+5 spell per fire-tagged ability.',
+    '+8 spell per fire-tagged ability.',
   ],
   onPassive: (ctx, level) => {
     const perSkill = [3, 5, 8][level - 1];
@@ -64,7 +64,7 @@ export const emberMind: SkillDef = {
       const skill = getSkill(os.id);
       if (skill?.tags.includes('fire')) count++;
     }
-    return [{ stat: 'spellPower', flat: count * perSkill }];
+    return [{ stat: 'spell', flat: count * perSkill }];
   },
 };
 

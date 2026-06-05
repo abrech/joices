@@ -1,4 +1,5 @@
 import type { SkillDef } from '../../../types/definitions';
+import { physicalDamage } from '../../../game/combat/skill-damage';
 
 export const crushingBlow: SkillDef = {
   id: 'crushing-blow',
@@ -12,13 +13,12 @@ export const crushingBlow: SkillDef = {
   baseCooldown: 0,
   manaCost: 2,
   levelDescriptions: [
-    'Deal 65% attack (2 mana).',
-    'Deal 78% attack (2 mana).',
-    'Deal 92% attack (2 mana).',
+    'Deal 2 + strength (2 mana).',
+    'Deal 3 + strength (2 mana).',
+    'Deal 4 + strength (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.65, 0.78, 0.92][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult * (ctx.synergies.damageMultiplier ?? 1));
+    const dmg = physicalDamage(ctx, level, [2, 3, 4]);
     return { damage: dmg, logMessage: `Crushing Blow smashes for ${dmg}!` };
   },
 };
@@ -57,13 +57,12 @@ export const hammerStun: SkillDef = {
   baseCooldown: 2,
   manaCost: 5,
   levelDescriptions: [
-    'Deal 105% attack and stun (5 mana). CD 2.',
-    'Deal 122% attack and stun (5 mana). CD 1.',
-    'Deal 140% attack and stun (5 mana).',
+    'Deal 5 + strength and stun (5 mana). CD 2.',
+    'Deal 7 + strength and stun (5 mana). CD 1.',
+    'Deal 9 + strength and stun (5 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.05, 1.22, 1.4][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [5, 7, 9]);
     return {
       damage: dmg,
       stun: true,
@@ -84,13 +83,12 @@ export const shockwave: SkillDef = {
   baseCooldown: 2,
   manaCost: 6,
   levelDescriptions: [
-    'Deal 110% attack + bleed (6 mana). CD 2.',
-    'Deal 130% attack + bleed (6 mana). CD 1.',
-    'Deal 150% attack + bleed (6 mana).',
+    'Deal 6 + strength + bleed (6 mana). CD 2.',
+    'Deal 8 + strength + bleed (6 mana). CD 1.',
+    'Deal 10 + strength + bleed (6 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.1, 1.3, 1.5][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [6, 8, 10]);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'bleed', stacks: level >= 2 ? 2 : 1 },

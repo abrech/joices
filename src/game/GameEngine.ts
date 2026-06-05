@@ -1,30 +1,14 @@
-import type { SkillPickPayload } from '../types/events';
 import type { GameState, RunActionPayload } from '../types/game-state';
 import {
   createEmptyProfile,
   createInitialRunState,
 } from '../types/game-state';
 import { profileStore } from './profile/ProfileStore';
-import {
-  resolveEnemyTurn as runEnemyTurn,
-  clearCombatLastAction,
-} from './combat/CombatEngine';
 import { appendAction } from './logging/RunLogger';
-import {
-  applySelectClass,
-  applySelectWeapon,
-  applyPickFloor,
-  applyCombatSkill,
-  applyCombatEndTurn,
-  applyClaimLoot,
-  applyLootSkillReward,
-  applySkipCombatLootSkillPick,
-  applySkipLootSkillReward,
-  applySelectSkill,
-  openCombatLoot,
-} from './RunCommands';
-import { completeEvent } from './events/EventResolver';
-import { purchaseShopItem } from './shop/ShopPurchase';
+import { applyClaimLoot, applyLootSkillReward, openCombatLoot } from './RunCommands';
+import { dispatchAction } from './dispatch';
+import { advanceCombat } from './combat/advanceCombat';
+import { clearCombatLastAction } from './combat/CombatEngine';
 
 export type GameListener = (state: GameState) => void;
 
@@ -63,72 +47,66 @@ export class GameEngine {
   }
 
   selectClass(classId: string): void {
-    const next = applySelectClass(this.state, classId);
+    const next = dispatchAction(this.state, { kind: 'selectClass', classId });
     if (next === this.state) return;
     this.commit(next, { kind: 'selectClass', classId });
   }
 
   selectWeapon(weaponId: string): void {
     if (this.state.run.phase !== 'weaponSelect') return;
-    const next = applySelectWeapon(this.state, weaponId);
+    const next = dispatchAction(this.state, { kind: 'selectWeapon', weaponId });
     this.commit(next, { kind: 'selectWeapon', weaponId });
   }
 
   selectFloorOption(index: number): void {
     const option = this.state.run.floorOptions[index];
     if (!option || this.state.run.phase !== 'floorChoice') return;
-    const next = applyPickFloor(this.state, index);
+    const next = dispatchAction(this.state, { kind: 'pickFloor', index, eventId: option.eventId });
     this.commit(next, { kind: 'pickFloor', index, eventId: option.eventId });
   }
 
   confirmHeal(): void {
-    this.commit(completeEvent(this.state), { kind: 'confirmHeal' });
+    this.commit(dispatchAction(this.state, { kind: 'confirmHeal' }), { kind: 'confirmHeal' });
   }
 
   selectSkill(skillId: string): void {
-    const next = applySelectSkill(this.state, skillId);
+    const next = dispatchAction(this.state, { kind: 'selectSkill', skillId });
     this.commit(next, { kind: 'selectSkill', skillId });
   }
 
   skipSkillPick(): void {
-    const payload = this.state.run.activeEvent?.payload as SkillPickPayload | undefined;
-    if (payload?.afterCombatLoot) {
-      const next = applySkipCombatLootSkillPick(this.state);
-      if (next !== this.state) {
-        this.commit(next, { kind: 'skipSkillPick' });
-      }
-      return;
-    }
-    this.commit(completeEvent(this.state, '__skip__'), { kind: 'skipSkillPick' });
+    const next = dispatchAction(this.state, { kind: 'skipSkillPick' });
+    if (next === this.state) return;
+    this.commit(next, { kind: 'skipSkillPick' });
   }
 
   skipLootSkillReward(): void {
-    const next = applySkipLootSkillReward(this.state);
+    const next = dispatchAction(this.state, { kind: 'skipSkillPick' });
     if (next === this.state) return;
     this.commit(next, { kind: 'skipSkillPick' });
   }
 
   buyShopItem(itemId: string): void {
-    this.commit(purchaseShopItem(this.state, itemId), { kind: 'buyShop', itemId });
+    this.commit(dispatchAction(this.state, { kind: 'buyShop', itemId }), { kind: 'buyShop', itemId });
   }
 
   leaveShop(): void {
-    this.commit(completeEvent(this.state, '__leave__'), { kind: 'leaveShop' });
+    this.commit(dispatchAction(this.state, { kind: 'leaveShop' }), { kind: 'leaveShop' });
   }
 
   combatUseSkill(skillId: string): void {
-    const next = applyCombatSkill(this.state, skillId);
-    this.handleCombatEnd(next, { kind: 'combatSkill', skillId });
+    const next = advanceCombat(this.state, 'playerSkill', skillId);
+    this.commit(next, { kind: 'combatSkill', skillId });
   }
 
   combatEndTurn(): void {
-    const next = applyCombatEndTurn(this.state);
-    this.handleCombatEnd(next, { kind: 'combatEndTurn' });
+    const next = advanceCombat(this.state, 'endPlayerTurn');
+    this.commit(next, { kind: 'combatEndTurn' });
   }
 
   resolveEnemyTurn(): void {
-    const run = runEnemyTurn(this.state.run);
-    this.handleCombatEnd({ ...this.state, run });
+    const next = advanceCombat(this.state, 'enemyStep');
+    this.commit(next);
   }
 
   clearCombatLastAction(): void {
@@ -142,7 +120,7 @@ export class GameEngine {
   combatDefeatContinue(): void {
     const run = this.state.run;
     if (!run.combat?.finished || run.combat.result !== 'lose') return;
-    this.commit(completeEvent({ ...this.state, run }, undefined, 'lose'), {
+    this.commit(dispatchAction(this.state, { kind: 'combatDefeatContinue' }), {
       kind: 'combatDefeatContinue',
     });
   }
@@ -156,14 +134,6 @@ export class GameEngine {
     const next = applyLootSkillReward(this.state, skillId);
     if (next === this.state) return;
     this.commit(next, { kind: 'selectSkill', skillId });
-  }
-
-  private handleCombatEnd(state: GameState, action?: RunActionPayload): void {
-    if (!state.run.combat?.finished) {
-      this.commit(state, action);
-      return;
-    }
-    this.commit(state, action);
   }
 
   clearSynergyToast(): void {

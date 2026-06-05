@@ -1,6 +1,11 @@
 import type { GameEngine } from '../../game/GameEngine';
 import { getEnemy } from '../../content/registries';
-import { scaledEnemyStats, calcThreatLevel, playerPower } from '../../game/progression/Scaling';
+import {
+  scaledBossStats,
+  scaledEnemyStats,
+  calcThreatLevel,
+  playerPower,
+} from '../../game/progression/Scaling';
 import { Card } from '../components/Card';
 
 export function FloorChoiceScreen(engine: GameEngine): HTMLElement {
@@ -34,12 +39,15 @@ export function FloorChoiceScreen(engine: GameEngine): HTMLElement {
       for (const id of ids) {
         const enemy = getEnemy(id);
         if (!enemy) continue;
-        const scaled = scaledEnemyStats(
-          enemy.baseStats.maxHp,
-          enemy.baseStats.attack,
-          run.floor,
-          enemy.tier,
-        );
+        const scaled =
+          option.eventId === 'boss'
+            ? scaledBossStats(enemy.baseStats.maxHp, enemy.baseStats.attack, run.floor)
+            : scaledEnemyStats(
+                enemy.baseStats.maxHp,
+                enemy.baseStats.attack,
+                run.floor,
+                enemy.tier,
+              );
         totalHp += scaled.hp;
         maxAtk = Math.max(maxAtk, scaled.attack);
       }

@@ -1,4 +1,5 @@
 import type { GameState } from '../types/game-state';
+import { createInitialPacing } from '../types/game-state';
 import type { CombatPayload, LootPayload, SkillPickPayload } from '../types/events';
 import { createPlayer } from './createPlayer';
 import { generateFloorOptions } from './progression/FloorGenerator';
@@ -34,7 +35,7 @@ export function applySelectWeapon(state: GameState, weaponId: string): GameState
     player,
     phase: 'floorChoice',
     floor: 1,
-    pacing: { combatsThisRun: 0 },
+    pacing: createInitialPacing(),
   };
   run = initRunLogOnWeaponSelect(run);
   run.floorOptions = generateFloorOptions(run);

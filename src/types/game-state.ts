@@ -96,9 +96,11 @@ export interface FloorOption {
 
 export interface RunPacing {
   combatsThisRun: number;
+  /** Floor when skill-training was last completed; -99 if never. */
+  lastTrainingFloor: number;
 }
 
-export const RUN_LOG_VERSION = 2;
+export const RUN_LOG_VERSION = 4;
 export const MAX_STORED_RUN_LOGS = 30;
 
 export type RunActionPayload =
@@ -174,7 +176,7 @@ export interface GameState {
 export const PROFILE_VERSION = 2;
 
 export function createInitialPacing(): RunPacing {
-  return { combatsThisRun: 0 };
+  return { combatsThisRun: 0, lastTrainingFloor: -99 };
 }
 
 export function createInitialRunState(seed = Date.now()): RunState {
@@ -189,10 +191,10 @@ export function createInitialRunState(seed = Date.now()): RunState {
       skills: [],
       stats: {
         maxHp: 0,
-        attack: 0,
+        strength: 0,
         critChance: 0,
         block: 0,
-        spellPower: 0,
+        spell: 0,
         maxMana: 0,
         manaRegen: 0,
       },

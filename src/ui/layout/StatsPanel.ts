@@ -51,10 +51,10 @@ export function StatsPanel(state: GameState): HTMLElement {
 
   const statRows: [string, string][] = [
     ['HP', `${player.hp} / ${player.stats.maxHp}`],
-    ['Attack', String(player.stats.attack)],
+    ['Strength', String(player.stats.strength)],
     ['Crit', `${Math.round(player.stats.critChance * 100)}%`],
     ['Block', String(player.stats.block)],
-    ['Spell', String(player.stats.spellPower)],
+    ['Spell', String(player.stats.spell)],
     ['Mana', `${state.run.combat?.currentMana ?? player.stats.maxMana} / ${player.stats.maxMana}`],
     ['Mana regen', `+${player.stats.manaRegen} / turn`],
     ['Gold', String(player.gold)],

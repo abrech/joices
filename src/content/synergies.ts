@@ -33,7 +33,7 @@ export const arcaneConduit: SynergyDef = {
   description: '2+ Magic skills: +20% spell damage',
   requiredTags: ['magic'],
   minCount: 2,
-  effect: () => ({ spellPowerBonus: 0.2, damageMultiplier: 1.1 }),
+  effect: () => ({ spellBonus: 0.2, damageMultiplier: 1.1 }),
 };
 
 export const toxicCloud: SynergyDef = {

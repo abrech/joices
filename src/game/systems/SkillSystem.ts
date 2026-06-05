@@ -37,11 +37,6 @@ export function getAttackSkills(run: RunState) {
   return run.player.skills.filter((s) => getSkill(s.id)?.type === 'attack');
 }
 
-/** @deprecated Use getAttackSkills */
-export function getActiveSkills(run: RunState) {
-  return getAttackSkills(run);
-}
-
 export function getPassiveSkills(run: RunState) {
   return run.player.skills.filter((s) => getSkill(s.id)?.type === 'passive');
 }

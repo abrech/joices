@@ -6,7 +6,7 @@ export const longsword: WeaponDef = {
   description: 'Balanced blade. Grants block on each strike.',
   imageKey: 'longsword',
   classId: 'warrior',
-  statModifiers: { attack: 3, block: 3 },
+  statModifiers: { strength: 3, block: 3 },
   tags: ['melee'],
   starterAttackId: 'sword-slash',
   starterBlockId: 'shield-guard',
@@ -18,7 +18,7 @@ export const warhammer: WeaponDef = {
   description: 'Slow but crushing. High damage with a chance to stun.',
   imageKey: 'warhammer',
   classId: 'warrior',
-  statModifiers: { attack: 5, critChance: -0.02 },
+  statModifiers: { strength: 5, critChance: -0.02 },
   tags: ['melee', 'heavy'],
   starterAttackId: 'crushing-blow',
   starterBlockId: 'iron-brace',
@@ -30,7 +30,7 @@ export const arcaneStaff: WeaponDef = {
   description: 'Amplifies spells. Best for AoE and fire builds.',
   imageKey: 'arcane-staff',
   classId: 'mage',
-  statModifiers: { spellPower: 7, attack: -2 },
+  statModifiers: { spell: 4, strength: 1 },
   tags: ['magic', 'aoe'],
   starterAttackId: 'staff-fireball',
 };
@@ -41,7 +41,7 @@ export const focusWand: WeaponDef = {
   description: 'Fast single-target casts. High burst damage.',
   imageKey: 'focus-wand',
   classId: 'mage',
-  statModifiers: { spellPower: 9, attack: 2, critChance: 0.06 },
+  statModifiers: { spell: 5, critChance: 0.06 },
   tags: ['magic'],
   starterAttackId: 'arcane-bolt',
 };
@@ -52,7 +52,7 @@ export const twinDaggers: WeaponDef = {
   description: 'Quick multi-hit attacks. Applies bleed stacks easily.',
   imageKey: 'twin-daggers',
   classId: 'rogue',
-  statModifiers: { attack: 4, critChance: 0.08, manaRegen: 1 },
+  statModifiers: { strength: 4, critChance: 0.08, manaRegen: 1 },
   tags: ['melee', 'bleed'],
   starterAttackId: 'twin-slash',
 };
@@ -63,7 +63,7 @@ export const handCrossbow: WeaponDef = {
   description: 'Ranged pierce attacks. Ignores some enemy block.',
   imageKey: 'hand-crossbow',
   classId: 'rogue',
-  statModifiers: { attack: 5, critChance: 0.06 },
+  statModifiers: { strength: 5, critChance: 0.06 },
   tags: ['ranged', 'pierce'],
   starterAttackId: 'crossbow-poison-dart',
 };

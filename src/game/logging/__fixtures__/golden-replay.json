@@ -1,0 +1,29 @@
+{
+  "id": "golden-replay-fixture",
+  "logVersion": 4,
+  "startedAt": 0,
+  "endedAt": 0,
+  "rngSeed": 42,
+  "finalRngState": 1083814273,
+  "classId": "warrior",
+  "weaponId": "longsword",
+  "floorReached": 1,
+  "runGoldEarned": 0,
+  "victory": false,
+  "skills": [
+    { "id": "thick-skin", "level": 1 },
+    { "id": "sword-slash", "level": 1 },
+    { "id": "shield-guard", "level": 1 }
+  ],
+  "actions": [
+    { "kind": "selectClass", "classId": "warrior", "seq": 0, "rngStateAfter": 42 },
+    { "kind": "selectWeapon", "weaponId": "longsword", "seq": 1, "rngStateAfter": 1083814273 },
+    {
+      "kind": "pickFloor",
+      "index": 0,
+      "eventId": "enemy",
+      "seq": 2,
+      "rngStateAfter": 1083814273
+    }
+  ]
+}

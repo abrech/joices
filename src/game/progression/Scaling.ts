@@ -65,7 +65,7 @@ export function calcThreatLevel(
 }
 
 export function playerPower(stats: Stats, hp: number): number {
-  return hp + stats.attack * 3 + stats.spellPower * 2 + stats.block * 2;
+  return hp + stats.strength * 3 + stats.spell * 2 + stats.block * 2;
 }
 
 export function scaledEnemyStats(

@@ -45,12 +45,13 @@ function pickWeightedEventForSlot(
 }
 
 export function getOptionCount(floor: number, rng: () => number): number {
-  if (floor <= 3) return 1;
+  if (floor <= 1) return 1;
+  if (floor <= 3) return 2;
   if (isBossFloor(floor + 1)) {
     const base = rng() < 0.7 ? 1 : 2;
     return Math.max(2, base);
   }
-  if (floor <= 9) return rng() < 0.7 ? 1 : 2;
+  if (floor <= 9) return rng() < 0.5 ? 1 : 2;
   const r = rng();
   if (r < 0.4) return 1;
   if (r < 0.8) return 2;

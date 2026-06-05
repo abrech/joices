@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "autoplay": "tsx scripts/autoplay.ts"
+    "autoplay": "tsx scripts/autoplay.ts",
+    "test": "vitest run"
   },
   "devDependencies": {
     "tsx": "^4.19.4",
     "typescript": "~6.0.2",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^4.1.8"
   }
 }

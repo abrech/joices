@@ -1,4 +1,5 @@
 import type { SkillDef } from '../../../types/definitions';
+import { physicalDamage } from '../../../game/combat/skill-damage';
 
 export const poisonDart: SkillDef = {
   id: 'crossbow-poison-dart',
@@ -12,14 +13,13 @@ export const poisonDart: SkillDef = {
   baseCooldown: 0,
   manaCost: 2,
   levelDescriptions: [
-    'Deal 55% attack + poison (2 mana).',
-    'Deal 68% attack + poison (2 mana).',
-    'Deal 82% attack + poison (2 mana).',
+    'Deal 1 + strength + poison (2 mana).',
+    'Deal 2 + strength + poison (2 mana).',
+    'Deal 3 + strength + poison (2 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.55, 0.68, 0.82][level - 1];
     const stacks = [3, 4, 5][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [1, 2, 3]);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },
@@ -40,14 +40,13 @@ export const markedShot: SkillDef = {
   baseCooldown: 2,
   manaCost: 4,
   levelDescriptions: [
-    'Deal 100% attack + poison (4 mana). CD 2.',
-    'Deal 118% attack + poison (4 mana). CD 1.',
-    'Deal 138% attack + poison (4 mana).',
+    'Deal 5 + strength + poison (4 mana). CD 2.',
+    'Deal 7 + strength + poison (4 mana). CD 1.',
+    'Deal 9 + strength + poison (4 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [1.0, 1.18, 1.38][level - 1];
     const stacks = [3, 3, 4][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [5, 7, 9]);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },
@@ -69,14 +68,13 @@ export const volley: SkillDef = {
   baseCooldown: 2,
   manaCost: 6,
   levelDescriptions: [
-    'Deal 88% attack + poison (6 mana). CD 2.',
-    'Deal 105% attack + poison (6 mana). CD 1.',
-    'Deal 122% attack + poison (6 mana).',
+    'Deal 4 + strength + poison (6 mana). CD 2.',
+    'Deal 6 + strength + poison (6 mana). CD 1.',
+    'Deal 8 + strength + poison (6 mana).',
   ],
   onUse: (ctx, level) => {
-    const mult = [0.88, 1.05, 1.22][level - 1];
     const stacks = [3, 4, 5][level - 1];
-    const dmg = Math.floor(ctx.player.stats.attack * mult);
+    const dmg = physicalDamage(ctx, level, [4, 6, 8]);
     return {
       damage: dmg,
       applyStatus: { target: 'enemy', type: 'poison', stacks },

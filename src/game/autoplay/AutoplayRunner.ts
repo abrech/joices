@@ -4,23 +4,17 @@ import type { LootPayload, ShopPayload, SkillPickPayload } from '../../types/eve
 import { appendAction, buildRunRecord } from '../logging/RunLogger';
 import { assertReplayMatches, replayRun } from '../logging/ReplayRunner';
 import { MemoryProfileStore, setProfileStore } from '../profile/ProfileStore';
+import { advanceCombat } from '../combat/advanceCombat';
+import { dispatchAction } from '../dispatch';
 import {
   applyClaimLoot,
-  applyCombatSkill,
-  applyCombatEndTurn,
   applyLootSkillReward,
-  applyPickFloor,
-  applySelectClass,
-  applySelectSkill,
-  applySelectWeapon,
   applySkipCombatLootSkillPick,
   applySkipLootSkillReward,
-  drainCombatEnemyPhase,
   needsLootScreenBeforeClaim,
   openCombatLoot,
 } from '../RunCommands';
 import { completeEvent } from '../events/EventResolver';
-import { purchaseShopItem } from '../shop/ShopPurchase';
 import type { AutoplayPolicy, AutoplayPolicyName } from './policy';
 import { getPolicy } from './policy';
 import {
@@ -89,7 +83,7 @@ function spendPlayerPhase(state: GameState, policy: AutoplayPolicy): GameState |
     const skillId = policy.selectCombatSkill(current);
     if (!skillId) break;
 
-    const next = applyCombatSkill(current, skillId);
+    const next = advanceCombat(current, 'playerSkill', skillId);
     if (next === current || next.run === current.run) break;
 
     current = commit(next, { kind: 'combatSkill', skillId });
@@ -104,11 +98,11 @@ function spendPlayerPhase(state: GameState, policy: AutoplayPolicy): GameState |
     return progressed || current !== state ? current : null;
   }
 
-  const ended = applyCombatEndTurn(current);
+  const ended = advanceCombat(current, 'endPlayerTurn');
   if (ended === current) return null;
 
   current = commit(ended, { kind: 'combatEndTurn' });
-  return drainCombatEnemyPhase(current);
+  return advanceCombat(current, 'enemyDrain');
 }
 
 function totalEnemyHp(state: GameState): number {
@@ -130,7 +124,7 @@ function resolveCombat(state: GameState, policy: AutoplayPolicy): GameState {
       current = next;
       if (!current.run.combat?.finished && fingerprint(current) === before) break;
     } else {
-      current = drainCombatEnemyPhase(current);
+      current = advanceCombat(current, 'enemyDrain');
     }
   }
 
@@ -187,7 +181,7 @@ function handleSkillPick(state: GameState, policy: AutoplayPolicy): GameState {
     return commit(completeEvent(state, '__skip__'), { kind: 'skipSkillPick' });
   }
 
-  const next = applySelectSkill(state, action.skillId);
+  const next = dispatchAction(state, { kind: 'selectSkill', skillId: action.skillId });
   if (next === state) return tryEscape(state, policy) ?? state;
   return commit(next, { kind: 'selectSkill', skillId: action.skillId });
 }
@@ -205,10 +199,10 @@ function handleShop(state: GameState, policy: AutoplayPolicy): GameState {
     );
 
     if (action.type === 'leave') {
-      return commit(completeEvent(current, '__leave__'), { kind: 'leaveShop' });
+      return commit(dispatchAction(current, { kind: 'leaveShop' }), { kind: 'leaveShop' });
     }
 
-    const next = purchaseShopItem(current, action.itemId);
+    const next = dispatchAction(current, { kind: 'buyShop', itemId: action.itemId });
     if (next === current) continue;
 
     current = commit(next, { kind: 'buyShop', itemId: action.itemId });
@@ -263,11 +257,10 @@ function tryEscape(state: GameState, _policy: AutoplayPolicy): GameState | null 
   if (phase === 'floorChoice' && floorOptions.length > 0) {
     const idx = 0;
     const option = floorOptions[idx];
-    const next = commit(applyPickFloor(state, idx), {
-      kind: 'pickFloor',
-      index: idx,
-      eventId: option.eventId,
-    });
+    const next = commit(
+      dispatchAction(state, { kind: 'pickFloor', index: idx, eventId: option.eventId }),
+      { kind: 'pickFloor', index: idx, eventId: option.eventId },
+    );
     if (next !== state) return next;
   }
 
@@ -295,7 +288,7 @@ function stepEvent(state: GameState, policy: AutoplayPolicy): GameState {
     case 'shop':
       return handleShop(state, policy);
     case 'heal':
-      return commit(completeEvent(state), { kind: 'confirmHeal' });
+      return commit(dispatchAction(state, { kind: 'confirmHeal' }), { kind: 'confirmHeal' });
     case 'combat':
       return resolveCombat(state, policy);
     default:
@@ -317,21 +310,26 @@ function step(state: GameState, policy: AutoplayPolicy): GameState {
   switch (phase) {
     case 'classSelect': {
       const classId = policy.selectClass(state);
-      return commit(applySelectClass(state, classId), { kind: 'selectClass', classId });
+      return commit(dispatchAction(state, { kind: 'selectClass', classId }), {
+        kind: 'selectClass',
+        classId,
+      });
     }
     case 'weaponSelect': {
       const weaponId = policy.selectWeapon(state);
-      return commit(applySelectWeapon(state, weaponId), { kind: 'selectWeapon', weaponId });
+      return commit(dispatchAction(state, { kind: 'selectWeapon', weaponId }), {
+        kind: 'selectWeapon',
+        weaponId,
+      });
     }
     case 'floorChoice': {
       if (!floorOptions.length) return state;
       const index = policy.selectFloorIndex(state);
       const option = floorOptions[index] ?? floorOptions[0];
-      return commit(applyPickFloor(state, index), {
-        kind: 'pickFloor',
-        index,
-        eventId: option.eventId,
-      });
+      return commit(
+        dispatchAction(state, { kind: 'pickFloor', index, eventId: option.eventId }),
+        { kind: 'pickFloor', index, eventId: option.eventId },
+      );
     }
     case 'event':
       return stepEvent(state, policy);

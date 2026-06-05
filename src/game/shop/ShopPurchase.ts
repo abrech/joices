@@ -1,6 +1,7 @@
 import type { GameEffect, ShopItem, ShopPayload } from '../../types/events';
 import type { GameState } from '../../types/game-state';
 import { applyEffects } from '../effects/EffectApplier';
+import { resolveShopItemId } from './shop-item-ids';
 
 export function buildShopPurchaseEffects(
   run: GameState['run'],
@@ -25,7 +26,8 @@ export function purchaseShopItem(state: GameState, itemId: string): GameState {
   if (!activeEvent || activeEvent.eventId !== 'shop') return state;
 
   const payload = (activeEvent.eventPayload ?? activeEvent.payload) as ShopPayload;
-  const item = payload.items.find((i) => i.id === itemId);
+  const resolvedId = resolveShopItemId(itemId);
+  const item = payload.items.find((i) => i.id === resolvedId || i.id === itemId);
   if (!item) return state;
 
   const effects = buildShopPurchaseEffects(state.run, item);

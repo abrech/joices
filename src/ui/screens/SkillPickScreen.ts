@@ -4,22 +4,17 @@ import { getSkill } from '../../content/registries';
 import { Card } from '../components/Card';
 import { getSkillDescription } from '../../game/systems/SkillSystem';
 import { isUpgradeable } from '../../game/systems/SkillFilters';
-
-function typeLabel(type: 'attack' | 'passive'): string {
-  return type === 'attack' ? 'Attack' : 'Passive';
-}
+import { skillTypeLabel } from './shared/skillCardMeta';
+import { createSelectScreenShell } from './shared/selectGrid';
 
 export function SkillPickScreen(engine: GameEngine, forModal = false): HTMLElement {
   const payload = engine.getState().run.activeEvent?.payload as SkillPickPayload;
 
-  const el = document.createElement('div');
-  if (!forModal) {
-    el.innerHTML = `<h1 class="screen-title">Training</h1>
-      <p class="screen-subtitle">${payload?.label ?? 'Choose an attack or passive'}</p>`;
-  }
-
-  const grid = document.createElement('div');
-  grid.className = 'card-grid card-grid--stagger';
+  const { root: el, grid } = createSelectScreenShell({
+    title: 'Training',
+    subtitle: payload?.label ?? 'Choose an attack or passive',
+    forModal,
+  });
 
   for (const skillId of payload?.skills ?? []) {
     const skill = getSkill(skillId);
@@ -29,7 +24,7 @@ export function SkillPickScreen(engine: GameEngine, forModal = false): HTMLEleme
 
     const level = owned ? owned.level + 1 : 1;
     const desc = getSkillDescription(skillId, level);
-    const kind = typeLabel(skill.type);
+    const kind = skillTypeLabel(skill.type);
     const title = owned
       ? `${skill.name} (${kind} — Upgrade to Lv${level})`
       : `${skill.name} (${kind})`;

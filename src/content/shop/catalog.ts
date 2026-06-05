@@ -23,12 +23,12 @@ export const SHOP_HEAL_ITEM: ShopCatalogEntry = {
 
 export const SHOP_STAT_ITEMS: ShopCatalogEntry[] = [
   {
-    id: 'shop-attack',
+    id: 'shop-strength',
     type: 'stat',
     name: 'Sharpening Stone',
-    description: '+2 Attack permanently this run',
+    description: '+2 Strength permanently this run',
     basePrice: 30,
-    stat: 'attack',
+    stat: 'strength',
     statDelta: 2,
   },
   {
@@ -62,9 +62,9 @@ export const SHOP_STAT_ITEMS: ShopCatalogEntry[] = [
     id: 'shop-spell',
     type: 'stat',
     name: 'Arcane Focus',
-    description: '+3 Spell Power permanently this run',
+    description: '+3 Spell permanently this run',
     basePrice: 28,
-    stat: 'spellPower',
+    stat: 'spell',
     statDelta: 3,
   },
 ];

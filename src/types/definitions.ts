@@ -2,10 +2,10 @@ import type { CombatContext, PassiveContext } from '../game/combat/CombatContext
 
 export interface Stats {
   maxHp: number;
-  attack: number;
+  strength: number;
   critChance: number;
   block: number;
-  spellPower: number;
+  spell: number;
   maxMana: number;
   manaRegen: number;
 }
@@ -84,7 +84,7 @@ export interface EnemyDef {
   imageKey: string;
   tags: string[];
   tier: EnemyTier;
-  baseStats: Pick<Stats, 'maxHp' | 'attack'>;
+  baseStats: { maxHp: number; attack: number };
   behavior: 'aggressive' | 'defensive' | 'bursty';
   goldDrop: [number, number];
 }
@@ -114,7 +114,7 @@ export interface SynergyBonuses {
   bleedDoubleTick?: boolean;
   bleedBonusPerStack?: number;
   critBonus?: number;
-  spellPowerBonus?: number;
+  spellBonus?: number;
   damageMultiplier?: number;
   poisonMultiplier?: number;
 }
